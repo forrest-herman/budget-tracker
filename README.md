@@ -18,6 +18,11 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+#### Dev
+```npm run dev``` is used for development with features like hot module replacement
+#### Production
+```npm run build``` is used to create an optimized production build, and ```npm run start``` is used to run the Next.js server in production mode after the build process is completed.
+
 ### Environment Variables
 Create and sotre Environment Variables as defined by [Next.js](https://nextjs.org/docs/pages/building-your-application/configuring/environment-variables)
 
