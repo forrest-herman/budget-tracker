@@ -12,7 +12,7 @@ const scopes = [
 
 export const options: NextAuthOptions = {
     session: {
-        maxAge: 60 * 60 //match the time of the tokens from google
+        maxAge: 60 * 60, // match the time of the tokens from google
     },
     providers: [
         GoogleProvider({
@@ -22,10 +22,13 @@ export const options: NextAuthOptions = {
                 params: {
                     scope: scopes.join(" "),
                     prompt: "consent",
-                }
-            }
+                    access_type: "offline",
+                    expiry_date: Date.now() + 12096e5,
+                },
+            },
         }),
-    ], callbacks: {
+    ],
+    callbacks: {
         async session(params) {
             const { session, token } = params;
             const newSession: any = { ...session };
@@ -49,11 +52,12 @@ export const options: NextAuthOptions = {
         },
         async signIn(params) {
             console.log("signIn", params);
-            const { account, profile } = params
+            const { account, profile } = params;
             //next-auth handles rejection of oauth
 
             //initialize app
             if (account && account.access_token) {
+                console.log("testing 1234");
                 try {
                     const auth = initGoogleAuth(account.access_token);
                     await findOrCreateSpreadsheet(auth);
@@ -64,6 +68,6 @@ export const options: NextAuthOptions = {
             } else {
                 return false;
             }
-        }
-    }
-}
+        },
+    },
+};

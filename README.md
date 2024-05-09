@@ -20,6 +20,10 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 #### Dev
 ```npm run dev``` is used for development with features like hot module replacement
+
+### UI
+The UI uses components by [shadcn](https://ui.shadcn.com/docs/installation/next)
+
 #### Production
 ```npm run build``` is used to create an optimized production build, and ```npm run start``` is used to run the Next.js server in production mode after the build process is completed.
 

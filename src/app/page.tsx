@@ -1,5 +1,6 @@
 import TransactionsTable from "@/components/TransactionsTable";
 import { Progress } from "@/components/ui/progress";
+import { Popover, PopoverTrigger } from "@/components/ui/popover";
 import { useSheetsClient } from "@/utils/hooks";
 import { Transaction } from "@/utils/TransactionsValidator";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
