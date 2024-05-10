@@ -9,10 +9,12 @@ export const TransactionFormSchema = z.object({
     transaction_type: z.string(), // expense or income
     date: z.string().regex(date_regex),
     merchant_company: z.string(),
+    // merchant_bank_description: z.string().optional(),
     amount: z.string().regex(amount_regex),
     description: z.string(),
-    category: z.string().optional(),
-    transaction_method: z.string().optional(),
+    category: z.string(),
+    // subcategory: z.string().optional(),
+    transaction_method: z.string(),
     payment_account: z.string().optional(),
     reimbursed: z.boolean().default(false),
 });

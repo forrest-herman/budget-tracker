@@ -17,15 +17,21 @@ const AddTransactionForm = () => {
     const form = useForm<TransactionForm>({
         resolver: zodResolver(TransactionFormSchema),
         defaultValues: {
+            transaction_type: "expense",
             date: format(new Date(), "yyyy-MM-dd"),
-            transaction_type: "income",
+            merchant_company: "",
             amount: "",
             description: "",
+            category: "",
+            transaction_method: "credit",
+            payment_account: "",
+            reimbursed: false,
         },
     });
 
     function onSubmit(values: TransactionForm) {
         console.log("form submitted with ", values);
+
         // Do something with the form values.
         //show errors and
         fetch("/api/transactions", {
@@ -45,7 +51,8 @@ const AddTransactionForm = () => {
     }
 
     return (
-        <div className='w-5/6'>
+        // TODO: vertical padding and scroll
+        <div className='w-5/6 h-full'>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
                     <FormField
@@ -54,17 +61,17 @@ const AddTransactionForm = () => {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Transaction Type</FormLabel>
-                                <FormControl>
-                                    <Select defaultValue='expense'>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
                                         <SelectTrigger className='w-[180px]'>
-                                            <SelectValue placeholder='Expense/Income' {...field} />
+                                            <SelectValue placeholder='Expense/Income' />
                                         </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value='expense'>Expense -$</SelectItem>
-                                            <SelectItem value='income'>Income +$</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </FormControl>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value='expense'>Expense -$</SelectItem>
+                                        <SelectItem value='income'>Income +$</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -79,6 +86,20 @@ const AddTransactionForm = () => {
                                 <FormLabel>Date</FormLabel>
                                 <FormControl>
                                     <Input placeholder='YYYY-MM-DD' {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name='merchant_company'
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Merchant / Company</FormLabel>
+                                {/* TODO: auto-complete */}
+                                <FormControl>
+                                    <Input {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -117,19 +138,19 @@ const AddTransactionForm = () => {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Transaction Category</FormLabel>
-                                <FormControl>
-                                    <Select>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
                                         <SelectTrigger className='w-[180px]'>
-                                            <SelectValue placeholder='Transaction Category' {...field} />
+                                            <SelectValue placeholder='Select Category' />
                                         </SelectTrigger>
-                                        <SelectContent>
-                                            {/* TODO: retrieve from excel */}
-                                            <SelectItem value='food'>Food</SelectItem>
-                                            <SelectItem value='Transportation'>Transportation</SelectItem>
-                                            <SelectItem value='housing'>Housing</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </FormControl>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {/* TODO: retrieve from excel */}
+                                        <SelectItem value='food'>Food</SelectItem>
+                                        <SelectItem value='transportation'>Transportation</SelectItem>
+                                        <SelectItem value='housing'>Housing</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -141,22 +162,22 @@ const AddTransactionForm = () => {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Payment Method</FormLabel>
-                                <FormControl>
-                                    <Select defaultValue='credit'>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder='Choose a payment method' {...field} />
+                                            <SelectValue placeholder='Choose a payment method' />
                                         </SelectTrigger>
-                                        <SelectContent>
-                                            {/* TODO: retrieve from excel */}
-                                            <SelectItem value='credit'>Credit</SelectItem>
-                                            <SelectItem value='e-transfer'>E-Transfer</SelectItem>
-                                            <SelectItem value='debit'>Debit</SelectItem>
-                                            <SelectItem value='cash'>Cash</SelectItem>
-                                            <SelectItem value='cheque'>Cheque</SelectItem>
-                                            <SelectItem value='direct_deposit'>Direct Deposit</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </FormControl>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {/* TODO: retrieve options from excel */}
+                                        <SelectItem value='credit'>Credit</SelectItem>
+                                        <SelectItem value='e-transfer'>E-Transfer</SelectItem>
+                                        <SelectItem value='debit'>Debit</SelectItem>
+                                        <SelectItem value='cash'>Cash</SelectItem>
+                                        <SelectItem value='cheque'>Cheque</SelectItem>
+                                        <SelectItem value='direct_deposit'>Direct Deposit</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -167,18 +188,18 @@ const AddTransactionForm = () => {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Payment Account</FormLabel>
-                                <FormControl>
-                                    <Select>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder='Choose a payment account' {...field} />
+                                            <SelectValue placeholder='Choose a payment account' />
                                         </SelectTrigger>
-                                        <SelectContent>
-                                            {/* TODO: retrieve from excel and filter based on transaction_method */}
-                                            <SelectItem value='1'>Tangerine MasterCard</SelectItem>
-                                            <SelectItem value='2'>Scotiabank VISA</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </FormControl>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {/* TODO: retrieve from excel and filter based on transaction_method */}
+                                        <SelectItem value='1'>Tangerine MasterCard</SelectItem>
+                                        <SelectItem value='2'>Scotiabank VISA</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <FormMessage />
                             </FormItem>
                         )}

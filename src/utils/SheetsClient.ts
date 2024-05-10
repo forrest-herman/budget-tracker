@@ -36,7 +36,7 @@ export default class SheetsClient {
     }
 
     /* 
-    compares given transactions with the ones already in the sheet
+    compares given transactions with the ones already in the sheet to ensure they are inserted in order
     */
     async compareTransactions(transactions: Transaction[]): Promise<Transaction[]> {
         //sort the transactions by date
@@ -95,9 +95,9 @@ export default class SheetsClient {
             requestBody: {
                 values: transactions.map((transaction) => [
                     // TODO: modify columns to match the sheet
-                    Date.now() || "",
-                    transaction.date || "",
-                    transaction.merchant_bank_description || "",
+                    transaction.date || "", // Used to show Month
+                    transaction.date || "", // Used to show full date
+                    transaction.merchant_company || "",
                     transaction.amount || "",
                     transaction.description || "",
                     transaction.category || "",
@@ -113,24 +113,32 @@ export default class SheetsClient {
     // TODO: edit/remove transaction
 
     async getTransactions(options?: { start_date?: Date; end_date?: Date; limit?: number }): Promise<Transaction[]> {
+        console.log("fetching Transactions");
+
         let query = "select *";
+
+        query += " WHERE B IS NOT NULL";
+
         if (options?.start_date && options?.end_date) {
             // Both dates are provided
-            query += ` where date '${options.start_date.toISOString().substring(0, 10)}' <= A and A <= date '${options.end_date.toISOString().substring(0, 10)}'`;
+            query += ` AND date '${options.start_date.toISOString().substring(0, 10)}' <= B and B <= date '${options.end_date.toISOString().substring(0, 10)}'`;
         } else if (options?.start_date) {
             // Only start date is provided
-            query += ` where date '${options.start_date.toISOString().substring(0, 10)}' <= A`;
+            query += ` AND date '${options.start_date.toISOString().substring(0, 10)}' <= B`;
         } else if (options?.end_date) {
             // Only end date is provided
-            query += ` where A <= date '${options.end_date.toISOString().substring(0, 10)}'`;
+            query += ` AND B <= date '${options.end_date.toISOString().substring(0, 10)}'`;
         }
 
-        query += " order by A desc";
+        query += " ORDER BY B desc";
 
         if (options?.limit) {
             query += ` limit ${options.limit}`;
         }
+
         const res = await this.query(query);
+
+        console.log(res);
 
         //convert dates to date objects
         const transactions = res.map((entry: any) => {
