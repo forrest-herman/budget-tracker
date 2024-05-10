@@ -150,8 +150,13 @@ export default class SheetsClient {
 
             return {
                 date: `${year}-${month < 10 ? "0" + month : month}-${day < 10 ? "0" + day : day}`,
-                description: entry["DESCRIPTION"] || entry["BANK DESCRIPTION"],
+                merchant_company: entry["MERCHANT/COMPANY"],
                 amount: entry["AMOUNT"],
+                description: entry["DESCRIPTION"],
+                category: entry["CATEGORY"],
+                payment_account: entry["PAYMENT ACCOUNT"],
+                transaction_method: entry["TRANSACTION METHOD"],
+                reimbursed: entry["REIMBURSED"],
             };
         });
         return transactions;
