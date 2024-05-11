@@ -39,7 +39,7 @@ export const options: NextAuthOptions = {
                     refresh_token: account.refresh_token,
                     user: token,
                 };
-            } else if (Date.now() < token.expires_at * 1000) {
+            } else if (Date.now() < (token.expires_at as number) * 1000) {
                 console.log("token not expired");
                 // If the access token has not expired yet, return it
                 return token;
