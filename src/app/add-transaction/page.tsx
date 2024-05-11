@@ -2,23 +2,32 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { format } from "date-fns";
+import { format, formatRelative } from "date-fns";
+import { formatRelativeDate } from "@/utils/dateUtils";
 
+import { cn } from "@/utils/shadcn";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { toast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { TransactionFormSchema } from "@/utils/TransactionsValidator";
 import type { TransactionForm } from "@/utils/TransactionsValidator";
+import { useState } from "react";
 
 const AddTransactionForm = () => {
+    const [calendarOpen, setCalendarOpen] = useState(false);
+
     const form = useForm<TransactionForm>({
         resolver: zodResolver(TransactionFormSchema),
         defaultValues: {
             transaction_type: "expense",
-            date: format(new Date(), "yyyy-MM-dd"),
+            date: new Date(),
             merchant_company: "",
             amount: "",
             description: "",
@@ -31,6 +40,14 @@ const AddTransactionForm = () => {
 
     function onSubmit(values: TransactionForm) {
         console.log("form submitted with ", values);
+        toast({
+            title: "You submitted the following values:",
+            description: (
+                <pre className='mt-2 w-[340px] rounded-md bg-slate-950 p-4'>
+                    <code className='text-white'>{JSON.stringify(values, null, 2)}</code>
+                </pre>
+            ),
+        });
 
         // Do something with the form values.
         //show errors and
@@ -44,6 +61,7 @@ const AddTransactionForm = () => {
             .then((resp) => {
                 //TODO: handle response
                 form.reset();
+                // TODO: redirect to dashboard home
             })
             .catch((resp) => {
                 //TODO: handle error
@@ -53,8 +71,9 @@ const AddTransactionForm = () => {
     return (
         // TODO: vertical padding and scroll
         <div className='w-5/6 h-full'>
+            <h1 className='text-3xl pt-4'>New Transaction</h1>
             <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
+                <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8 py-5'>
                     <FormField
                         control={form.control}
                         name='transaction_type'
@@ -81,12 +100,30 @@ const AddTransactionForm = () => {
                         control={form.control}
                         name='date'
                         render={({ field }) => (
-                            // TODO: date picker
                             <FormItem>
                                 <FormLabel>Date</FormLabel>
-                                <FormControl>
-                                    <Input placeholder='YYYY-MM-DD' {...field} />
-                                </FormControl>
+                                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal flex", !field.value && "text-muted-foreground")}>
+                                                {field.value ? formatRelativeDate(field.value) : <span>Select a date</span>}
+                                                <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className='w-auto p-0' align='start'>
+                                        <Calendar
+                                            mode='single'
+                                            selected={field.value}
+                                            onSelect={(event) => {
+                                                field.onChange(event);
+                                                setCalendarOpen(false);
+                                            }}
+                                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -101,6 +138,7 @@ const AddTransactionForm = () => {
                                 <FormControl>
                                     <Input {...field} />
                                 </FormControl>
+                                {/* <FormDescription>Business name</FormDescription> */}
                                 <FormMessage />
                             </FormItem>
                         )}
@@ -112,13 +150,23 @@ const AddTransactionForm = () => {
                             <FormItem>
                                 <FormLabel>Amount</FormLabel>
                                 <FormControl>
-                                    <Input placeholder='0.00' {...field} />
+                                    <Input
+                                        type='number'
+                                        step='0.01'
+                                        placeholder='0.00'
+                                        {...field}
+                                        onChange={(e) => {
+                                            field.onChange(e);
+                                            console.log("format:", e.target.value);
+                                        }}
+                                    />
+                                    {/* TODO: add better auto-formatting to the $ amount. Maybe use this? https://gist.github.com/Sutil/5285f2e5a912dcf14fc23393dac97fed */}
                                 </FormControl>
-                                <FormDescription>Add &quot;-&quot; to amount if you&apos;ve spent money (e.g. -1.00)</FormDescription>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
+                    {/* TODO: add currency selector (Select), which looks up the current conversion rates and displays the equivalent amount in CAD which is then used to save to database */}
                     <FormField
                         control={form.control}
                         name='description'
@@ -208,7 +256,7 @@ const AddTransactionForm = () => {
                         control={form.control}
                         name='reimbursed'
                         render={({ field }) => (
-                            <FormItem className='flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4'>
+                            <FormItem className='flex flex-row items-start space-x-3 space-y-0 rounded-md'>
                                 <FormLabel>Reimbursed?</FormLabel>
                                 <FormControl>
                                     <Checkbox checked={field.value} onCheckedChange={field.onChange} />

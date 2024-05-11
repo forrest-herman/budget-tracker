@@ -2,24 +2,33 @@ import { OAuth2Client } from "google-auth-library";
 import { google, sheets_v4 } from "googleapis";
 import { extractDataFromQueryResponse, initGoogleAuth, initSheetsClient } from "./googleUtils";
 import { Transaction } from "./TransactionsValidator";
+import { format } from "date-fns";
 
 export default class SheetsClient {
     private auth: OAuth2Client;
     private sheets: sheets_v4.Sheets;
     private spreadsheet_id: string;
-    constructor(access_token: string, spreadsheet_id: string) {
+
+    user: { [key: string]: string | undefined };
+
+    constructor(access_token: string, spreadsheet_id: string, user: { [key: string]: string | undefined }) {
         this.auth = initGoogleAuth(access_token);
         this.sheets = initSheetsClient(this.auth);
         this.spreadsheet_id = spreadsheet_id;
+        this.user = user;
     }
 
     //add data filtering get methods
     //what other operations should it support?
 
     async getAllTransactions() {
+        console.log("get all transactions");
+
+        // TODO: get all expenses and income
+
         const res = await this.sheets.spreadsheets.values.get({
             spreadsheetId: this.spreadsheet_id,
-            range: "Transactions!A2:Z",
+            range: "Transactions!A2:Z", // TODO: Sheet name
         });
         //make them into objects
         if (!res.data.values) return [];
@@ -39,12 +48,15 @@ export default class SheetsClient {
     compares given transactions with the ones already in the sheet to ensure they are inserted in order
     */
     async compareTransactions(transactions: Transaction[]): Promise<Transaction[]> {
-        //sort the transactions by date
+        // TODO: double check this function
+        console.log("comparing:", transactions);
+        // sort the transactions by date
         transactions.sort((a: any, b: any) => {
             if (a["date"] > b["date"]) return -1;
             if (a["date"] < b["date"]) return 1;
             return b.amount - a.amount;
         });
+
         const end_date = new Date(transactions[0]["date"]);
         const start_date = new Date(transactions[transactions.length - 1]["date"]);
         const sheet_transactions = await this.getTransactions({ start_date, end_date });
@@ -95,8 +107,8 @@ export default class SheetsClient {
             requestBody: {
                 values: transactions.map((transaction) => [
                     // TODO: modify columns to match the sheet
-                    transaction.date || "", // Used to show Month
-                    transaction.date || "", // Used to show full date
+                    format(transaction.date, "yyyy-MM-dd") || "", // Used to show Month
+                    format(transaction.date, "yyyy-MM-dd") || "", // Used to show full date
                     transaction.merchant_company || "",
                     transaction.amount || "",
                     transaction.description || "",
@@ -136,13 +148,15 @@ export default class SheetsClient {
             query += ` limit ${options.limit}`;
         }
 
+        console.log(query);
+
         const res = await this.query(query);
 
-        console.log(res);
+        // console.log(res);
 
         //convert dates to date objects
         const transactions = res.map((entry: any) => {
-            //parse the date
+            // TODO parse the date into a proper date object?
             //Date usually has the form "Date(year,month,date)" (if the user didn't change anything)
             let [year, month, day] = entry["DATE"].substring(5, entry["DATE"].length - 1).split(",");
             month = parseInt(month);
@@ -167,13 +181,13 @@ export default class SheetsClient {
 
         if (options?.startDate && options?.endDate) {
             // Both dates are provided
-            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= A and A <= date '${options.endDate.toISOString().substring(0, 10)}'`;
+            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= B and B <= date '${options.endDate.toISOString().substring(0, 10)}'`;
         } else if (options?.startDate) {
             // Only start date is provided
-            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= A`;
+            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= B`;
         } else if (options?.endDate) {
             // Only end date is provided
-            query += ` where A <= date '${options.endDate.toISOString().substring(0, 10)}'`;
+            query += ` where B <= date '${options.endDate.toISOString().substring(0, 10)}'`;
         }
 
         const res = await this.query(query);
@@ -185,18 +199,18 @@ export default class SheetsClient {
     }
 
     async getCategorySpending(options?: { startDate?: Date; endDate?: Date }): Promise<{ [category: string]: number }> {
-        let query = "select E, sum(D)";
+        let query = "select F, sum(D)";
         if (options?.startDate && options?.endDate) {
             // Both dates are provided
-            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= A and A <= date '${options.endDate.toISOString().substring(0, 10)}'`;
+            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= B and B <= date '${options.endDate.toISOString().substring(0, 10)}'`;
         } else if (options?.startDate) {
             // Only start date is provided
-            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= A`;
+            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= B`;
         } else if (options?.endDate) {
             // Only end date is provided
-            query += ` where A <= date '${options.endDate.toISOString().substring(0, 10)}'`;
+            query += ` where B <= date '${options.endDate.toISOString().substring(0, 10)}'`;
         }
-        query += "group by E";
+        query += "group by F";
 
         const res = await this.query(query);
         const spendingByCategory: { [category: string]: number } = {};

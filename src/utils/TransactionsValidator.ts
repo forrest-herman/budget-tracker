@@ -7,7 +7,7 @@ export const amount_regex = /^[-+]?\d+\.\d\d?$/;
 // TODO: merge zod objects
 export const TransactionFormSchema = z.object({
     transaction_type: z.string(), // expense or income
-    date: z.string().regex(date_regex),
+    date: z.coerce.date({ required_error: "Transaction date is required" }),
     merchant_company: z.string(),
     // merchant_bank_description: z.string().optional(),
     amount: z.string().regex(amount_regex),
@@ -22,7 +22,7 @@ export type TransactionForm = z.infer<typeof TransactionFormSchema>;
 
 // DATE,	MERCHANT/COMPANY,	AMOUNT,	DESCRIPTION,	CATEGORY,	SUBCATEGORY,	PAYMENT ACCOUNT,	TRANSACTION METHOD,	REIMBURSED
 export const TransactionSchema = z.object({
-    date: z.string().regex(date_regex),
+    date: z.coerce.date(),
     merchant_company: z.string(),
     // merchant_bank_description: z.string().optional(),
     amount: z.coerce.number(),
@@ -36,5 +36,6 @@ export const TransactionSchema = z.object({
 export type Transaction = z.infer<typeof TransactionSchema>;
 
 export function validateTransactions(transactions: unknown) {
+    // console.log(transactions);
     return z.array(TransactionSchema).parse(transactions);
 }
