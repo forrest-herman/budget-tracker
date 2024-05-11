@@ -2,6 +2,7 @@ import type { OAuth2Client } from "google-auth-library";
 import type { drive_v3, sheets_v4 } from "googleapis";
 import { google } from "googleapis"
 const { GOOGLE_ID, GOOGLE_SECRET } = process.env;
+
 export function initGoogleAuth(access_token: string) {
     const auth = new google.auth.OAuth2({
         clientId: GOOGLE_ID,
@@ -15,14 +16,14 @@ export function initGoogleAuth(access_token: string) {
 export function initDriveClient(auth: OAuth2Client) {
     return google.drive({
         version: "v3",
-        auth: auth
+        auth: auth,
     });
 }
 
 export function initSheetsClient(auth: OAuth2Client) {
     return google.sheets({
         version: "v4",
-        auth: auth
+        auth: auth,
     });
 }
 
@@ -50,7 +51,10 @@ test cases
  */
 export async function findSpreadsheet(drive: drive_v3.Drive): Promise<string | null> {
     const response = await drive.files.list();
-    //find and return the spreadsheet id
+
+    console.log("FILES: \n\n", response);
+
+    // find and return the spreadsheet id
     const files = response.data.files;
     if (!files || files.length == 0) return null;
     const spreadsheets = files.filter((file) => {
@@ -63,69 +67,242 @@ export async function findSpreadsheet(drive: drive_v3.Drive): Promise<string | n
 }
 
 export async function createSpreadsheet(sheets: sheets_v4.Sheets) {
-
+    console.log("Creating a new spreadsheet");
     const header_format = {
         backgroundColorStyle: {
             rgbColor: {
                 red: 60 / 255,
                 green: 120 / 255,
-                blue: 216 / 255
-            }
+                blue: 216 / 255,
+            },
         },
         textFormat: {
             foregroundColorStyle: {
                 rgbColor: {
                     red: 1,
                     green: 1,
-                    blue: 1
+                    blue: 1,
                 },
-            }
+            },
         },
         horizontalAlignment: "CENTER",
         verticalAlignment: "MIDDLE",
-    }
-    const response = await sheets.spreadsheets.create({
-        requestBody: {
-            properties: {
-                title: "Personal Budget Tracker"
-            },
-            sheets: [{
-                properties: {
-                    title: "Transactions",
-                    gridProperties: {
-                        frozenRowCount: 1
-                    }
+    };
+    const header_format_expenses = {
+        backgroundColorStyle: {
+            rgbColor: {
+                red: 255 / 255,
+                green: 118 / 255,
+                blue: 20 / 255,
+            }, // orange
+        },
+        textFormat: {
+            foregroundColorStyle: {
+                rgbColor: {
+                    red: 1,
+                    green: 1,
+                    blue: 1,
                 },
-                data: [{
-                    startRow: 0,
-                    startColumn: 0,
-                    rowData: [
-                        {
-                            values: [
-                                { userEnteredValue: { stringValue: "DATE" }, userEnteredFormat: header_format },
-                                { userEnteredValue: { stringValue: "BANK DESCRIPTION" }, userEnteredFormat: header_format },
-                                { userEnteredValue: { stringValue: "DESCRIPTION" }, userEnteredFormat: header_format },
-                                { userEnteredValue: { stringValue: "AMOUNT" }, userEnteredFormat: header_format },
-                                { userEnteredValue: { stringValue: "CATEGORY" }, userEnteredFormat: header_format },
-                                { userEnteredValue: { stringValue: "ACCOUNT" }, userEnteredFormat: header_format },
-                            ]
-                        }
-                    ],
-                    rowMetadata: [{ pixelSize: 35 }]
-                }, {
-                    startRow: 0,
-                    startColumn: 1,
-                    columnMetadata: [{ pixelSize: 7 }]
-                }],
-            }, {
+            },
+        },
+        horizontalAlignment: "CENTER",
+        verticalAlignment: "MIDDLE",
+    };
+    const header_format_income = {
+        backgroundColorStyle: {
+            rgbColor: {
+                red: 0 / 255,
+                green: 155 / 255,
+                blue: 100 / 255,
+            }, // green
+        },
+        textFormat: {
+            foregroundColorStyle: {
+                rgbColor: {
+                    red: 1,
+                    green: 1,
+                    blue: 1,
+                },
+            },
+        },
+        horizontalAlignment: "CENTER",
+        verticalAlignment: "MIDDLE",
+    };
+
+    try {
+        const response = await sheets.spreadsheets.create({
+            requestBody: {
                 properties: {
-                    title: "Categories"
-                }
-            }],
-        }
-    });
-    console.log(response.data);
-    return response.data.spreadsheetId;
+                    title: "Financial Transactions and Budget",
+                },
+                sheets: [
+                    {
+                        properties: {
+                            title: "Expenses",
+                            gridProperties: {
+                                frozenRowCount: 1,
+                            },
+                        },
+                        data: [
+                            {
+                                startRow: 0,
+                                startColumn: 0,
+                                rowData: [
+                                    {
+                                        values: [
+                                            { userEnteredValue: { stringValue: "MONTH" }, userEnteredFormat: header_format_expenses },
+                                            { userEnteredValue: { stringValue: "DATE" }, userEnteredFormat: header_format_expenses },
+                                            { userEnteredValue: { stringValue: "MERCHANT/COMPANY" }, userEnteredFormat: header_format_expenses },
+                                            { userEnteredValue: { stringValue: "AMOUNT" }, userEnteredFormat: header_format_expenses },
+                                            { userEnteredValue: { stringValue: "DESCRIPTION" }, userEnteredFormat: header_format_expenses },
+                                            { userEnteredValue: { stringValue: "CATEGORY" }, userEnteredFormat: header_format_expenses },
+                                            { userEnteredValue: { stringValue: "SUBCATEGORY" }, userEnteredFormat: header_format_expenses },
+                                            { userEnteredValue: { stringValue: "PAYMENT ACCOUNT" }, userEnteredFormat: header_format_expenses }, // credit card, bank account, cash,
+                                            { userEnteredValue: { stringValue: "TRANSACTION METHOD" }, userEnteredFormat: header_format_expenses }, // direct deposit, cash, debit, credit, etransfer, cheque
+                                            { userEnteredValue: { stringValue: "REIMBURSED" }, userEnteredFormat: header_format_expenses },
+                                        ],
+                                    },
+                                ],
+                                rowMetadata: [{ pixelSize: 40 }],
+                            },
+                            {
+                                startRow: 0,
+                                startColumn: 3,
+                                columnMetadata: [{ pixelSize: 50 }],
+                            },
+                            {
+                                startRow: 0,
+                                startColumn: 5,
+                                columnMetadata: [{ pixelSize: 60 }],
+                            },
+                        ],
+                        // conditionalFormats: [
+                        //     {
+                        //         ranges: [
+                        //             {
+                        //                 startRowIndex: 1,
+                        //                 startColumnIndex: 9,
+                        //                 endColumnIndex: 10,
+                        //             },
+                        //         ],
+                        //         booleanRule: {
+                        //             condition: {
+                        //                 type: "BOOLEAN",
+                        //             },
+                        //             // format: {
+                        //             //   object (CellFormat)
+                        //             // }
+                        //         },
+                        //     },
+                        // ],
+                    },
+                    {
+                        properties: {
+                            title: "Income",
+                            gridProperties: {
+                                frozenRowCount: 1,
+                            },
+                        },
+                        data: [
+                            {
+                                startRow: 0,
+                                startColumn: 0,
+                                rowData: [
+                                    {
+                                        values: [
+                                            { userEnteredValue: { stringValue: "MONTH" }, userEnteredFormat: header_format_income },
+                                            { userEnteredValue: { stringValue: "DATE" }, userEnteredFormat: header_format_income },
+                                            { userEnteredValue: { stringValue: "MERCHANT/COMPANY" }, userEnteredFormat: header_format_income },
+                                            { userEnteredValue: { stringValue: "AMOUNT" }, userEnteredFormat: header_format_income },
+                                            { userEnteredValue: { stringValue: "DESCRIPTION" }, userEnteredFormat: header_format_income },
+                                            { userEnteredValue: { stringValue: "CATEGORY" }, userEnteredFormat: header_format_income }, // Work, Business, Personal, CRA, Misc
+                                            { userEnteredValue: { stringValue: "SUBCATEGORY" }, userEnteredFormat: header_format_income }, // Salary, Bonus, Gift, Refund, Interest, Sale, Grant
+                                            { userEnteredValue: { stringValue: "PAYMENT ACCOUNT" }, userEnteredFormat: header_format_income }, // credit card, bank account, cash,
+                                            { userEnteredValue: { stringValue: "TRANSACTION METHOD" }, userEnteredFormat: header_format_income }, // direct deposit, cash, debit, credit, etransfer, cheque
+                                        ],
+                                    },
+                                ],
+                                rowMetadata: [{ pixelSize: 40 }],
+                            },
+                            {
+                                startRow: 0,
+                                startColumn: 3,
+                                columnMetadata: [{ pixelSize: 50 }],
+                            },
+                            {
+                                startRow: 0,
+                                startColumn: 5,
+                                columnMetadata: [{ pixelSize: 60 }],
+                            },
+                        ],
+                    },
+                    {
+                        properties: {
+                            title: "CONFIG: Categories",
+                        },
+                        data: [
+                            {
+                                startRow: 0,
+                                startColumn: 0,
+                                rowData: [
+                                    {
+                                        values: [
+                                            { userEnteredValue: { stringValue: "Type" }, userEnteredFormat: header_format },
+                                            { userEnteredValue: { stringValue: "Category" }, userEnteredFormat: header_format },
+                                            // { userEnteredValue: { stringValue: "Subcategory" }, userEnteredFormat: header_format },
+                                        ],
+                                    },
+                                ],
+                                rowMetadata: [{ pixelSize: 35 }],
+                            },
+                        ],
+                        // conditionalFormats: [
+                        //     {
+                        //         ranges: [
+                        //             {
+                        //                 startRowIndex: 1,
+                        //                 startColumnIndex: 0,
+                        //                 endColumnIndex: 1,
+                        //             },
+                        //         ],
+                        //         booleanRule: {
+                        //             condition: {
+                        //                 type: "BOOLEAN",
+                        //                 values: [{ userEnteredValue: "Income" }, { userEnteredValue: "Expense" }],
+                        //             },
+                        //         },
+                        //     },
+                        // ],
+                    },
+                    {
+                        properties: {
+                            title: "CONFIG: Payment Methods",
+                        },
+                        data: [
+                            {
+                                startRow: 0,
+                                startColumn: 0,
+                                rowData: [
+                                    {
+                                        values: [
+                                            { userEnteredValue: { stringValue: "Transaction Account" }, userEnteredFormat: header_format },
+                                            { userEnteredValue: { stringValue: "Payment Method" }, userEnteredFormat: header_format },
+                                        ],
+                                    },
+                                ],
+                                rowMetadata: [{ pixelSize: 35 }],
+                            },
+                        ],
+                    },
+                ],
+            },
+        });
+        console.log(response.data);
+        return response.data.spreadsheetId;
+    } catch (err) {
+        console.error("Error creating spreadsheet: ", err);
+        throw new Error("Error creating spreadsheet");
+    }
 }
 
 export function extractDataFromQueryResponse(text: string): any {
