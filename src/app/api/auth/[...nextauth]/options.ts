@@ -83,7 +83,6 @@ export const options: NextAuthOptions = {
         },
         async session({ session, token }) {
             console.log("session params", { session, token });
-            session.error = token.error;
             return {
                 ...session,
                 ...token,
