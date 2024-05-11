@@ -89,24 +89,24 @@ export const options: NextAuthOptions = {
             };
         },
         // Use the signIn() callback to control if a user is allowed to sign in.
-        async signIn(params) {
-            console.log("signIn", params);
-            const { account, profile } = params;
-            //next-auth handles rejection of oauth
+        // async signIn(params) {
+        //     console.log("signIn", params);
+        //     const { account, profile } = params;
+        //     //next-auth handles rejection of oauth
 
-            //initialize app
-            // if (account && account.access_token) {
-            //     try {
-            //         const auth = initGoogleAuth(account.access_token);
-            //         await findOrCreateSpreadsheet(auth);
-            //         return true;
-            //     } catch (err) {
-            //         return false;
-            //     }
-            // } else {
-            //     return false;
-            // }
-            return false;
-        },
+        //     //initialize app
+        //     // if (account && account.access_token) {
+        //     //     try {
+        //     //         const auth = initGoogleAuth(account.access_token);
+        //     //         await findOrCreateSpreadsheet(auth);
+        //     //         return true;
+        //     //     } catch (err) {
+        //     //         return false;
+        //     //     }
+        //     // } else {
+        //     //     return false;
+        //     // }
+        //     return true;
+        // },
     },
 };

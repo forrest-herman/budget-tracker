@@ -14,7 +14,9 @@ const NavLink = ({ Icon, link, text }: { Icon: React.ForwardRefExoticComponent<I
         </Link>
     );
 };
-const NavPopover = ({ Icon, onClick, text }: { Icon: React.ForwardRefExoticComponent<IconProps & RefAttributes<SVGSVGElement>>; onClick: Function; text: string }) => {
+import { MouseEventHandler } from "react"; // Import MouseEventHandler
+
+const NavPopover = ({ Icon, onClick, text }: { Icon: React.ForwardRefExoticComponent<IconProps & RefAttributes<SVGSVGElement>>; onClick: MouseEventHandler<HTMLDivElement>; text: string }) => {
     return (
         <div onClick={onClick}>
             <Button variant='ghost' className='h-12 w-full justify-start'>
@@ -25,7 +27,7 @@ const NavPopover = ({ Icon, onClick, text }: { Icon: React.ForwardRefExoticCompo
     );
 };
 
-const Nav = ({ isSettingsModalVisible, setIsSettingModalVisible }) => {
+const Nav = ({ isSettingsModalVisible, setIsSettingModalVisible }: { isSettingsModalVisible: boolean; setIsSettingModalVisible: React.Dispatch<React.SetStateAction<boolean>> }) => {
     return (
         <nav className='h-full w-full flex flex-col overflow-hidden'>
             <div className='h-full flex flex-col justify-between'>

@@ -13,7 +13,7 @@ const columns: ColumnDef<Transaction>[] = [
         cell: (props) => (
             // temporary basic tooltip
             <div>
-                <span title={props.getValue()}>{formatRelativeDate(new Date(props.getValue()))}</span>
+                <span title={String(props.getValue())}>{formatRelativeDate(new Date(String(props.getValue())))}</span>
             </div>
         ),
     },

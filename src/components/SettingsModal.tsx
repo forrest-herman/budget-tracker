@@ -1,10 +1,10 @@
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import { Button } from "./ui/button";
 
-const SettingsModal = ({ isSettingsModalVisible, setIsSettingModalVisible }) => {
+const SettingsModal = ({ isSettingsModalVisible, setIsSettingModalVisible }: { isSettingsModalVisible: boolean; setIsSettingModalVisible: React.Dispatch<React.SetStateAction<boolean>> }) => {
     return (
         <div className='fixed inset-0 bg-black bg-opacity-50' onClick={() => setIsSettingModalVisible(!isSettingsModalVisible)}>
-            <Popover placement='right'>
+            <Popover>
                 <PopoverTrigger>
                     <Button>Open Popover</Button>
                 </PopoverTrigger>

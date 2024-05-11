@@ -173,7 +173,10 @@ export default class SheetsClient {
                 reimbursed: entry["REIMBURSED"],
             };
         });
-        return transactions;
+        return transactions.map((transaction) => ({
+            ...transaction,
+            date: new Date(transaction.date),
+        }));
     }
 
     async getTotalSpending(options?: { startDate?: Date; endDate?: Date }): Promise<number> {
