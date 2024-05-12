@@ -7,7 +7,8 @@ const scopes = ["email", "openid", "profile", "https://www.googleapis.com/auth/s
 
 export const options: NextAuthOptions = {
     session: {
-        maxAge: 60 * 60, // match the time of the tokens from google
+        // Seconds - How long until an idle session expires and is no longer valid.
+        maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     providers: [
         GoogleProvider({
