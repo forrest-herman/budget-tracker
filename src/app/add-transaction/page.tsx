@@ -151,8 +151,9 @@ const AddTransactionForm = () => {
                                 <FormLabel>Amount</FormLabel>
                                 <FormControl>
                                     <Input
-                                        type='number'
-                                        step='0.01'
+                                        inputmode='numeric'
+                                        pattern='[0-9]*'
+                                        type='text'
                                         placeholder='0.00'
                                         {...field}
                                         onChange={(e) => {
