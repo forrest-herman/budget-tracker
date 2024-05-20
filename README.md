@@ -31,6 +31,8 @@ The UI uses components by [shadcn](https://ui.shadcn.com/docs/installation/next)
 Create and sotre Environment Variables as defined by [Next.js](https://nextjs.org/docs/pages/building-your-application/configuring/environment-variables)
 
 This project requires: 
+- `NEXTAUTH_URL`
+- `NEXTAUTH_SECRET`
 - `GOOGLE_ID`
 - `GOOGLE_SECRET`
 
