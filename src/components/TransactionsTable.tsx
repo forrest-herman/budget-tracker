@@ -25,7 +25,15 @@ const columns: ColumnDef<Transaction>[] = [
         ),
     },
     { header: "Merchant", accessorKey: "merchant_company" },
-    { header: "Amount", accessorKey: "amount" },
+    {
+        header: "Amount",
+        accessorKey: "amount",
+        cell: (props) => (
+            <div>
+                <span>{"$" + (props.getValue() as Number).toFixed(2)}</span>
+            </div>
+        ), // TODO: create a currency display function to add comman seperators, etc.
+    },
     { header: "Description", accessorKey: "description" }, // TODO maxSize: 100 and add ellipsis
     { header: "Category", accessorKey: "category" },
     { header: "Payment Account", accessorKey: "payment_account" },
