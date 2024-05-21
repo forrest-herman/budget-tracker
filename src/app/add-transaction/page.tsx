@@ -29,7 +29,7 @@ const AddTransactionForm = () => {
             transaction_type: "expense",
             date: new Date(),
             merchant_company: "",
-            amount: "",
+            amount: undefined,
             description: "",
             category: "",
             transaction_method: "credit",
@@ -151,15 +151,15 @@ const AddTransactionForm = () => {
                                 <FormLabel>Amount</FormLabel>
                                 <FormControl>
                                     <Input
-                                        inputmode='numeric'
-                                        pattern='[0-9]*'
+                                        // inputMode='numeric'
+                                        // pattern='[0-9]*'
                                         type='text'
                                         placeholder='0.00'
                                         {...field}
-                                        onChange={(e) => {
-                                            field.onChange(e);
-                                            console.log("format:", e.target.value);
-                                        }}
+                                        // onChange={(e) => {
+                                        //     field.onChange(e);
+                                        //     console.log("format:", e.target.value);
+                                        // }}
                                     />
                                     {/* TODO: add better auto-formatting to the $ amount. Maybe use this? https://gist.github.com/Sutil/5285f2e5a912dcf14fc23393dac97fed */}
                                 </FormControl>
