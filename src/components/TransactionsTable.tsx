@@ -5,6 +5,13 @@ import { DataTable } from "./DataTable";
 import { Checkbox } from "./ui/checkbox";
 import { formatRelativeDate } from "@/utils/dateUtils";
 
+const hoverDateFormat: { [id: string]: string } = {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+};
+
 const columns: ColumnDef<Transaction>[] = [
     {
         header: "Date",
@@ -13,13 +20,13 @@ const columns: ColumnDef<Transaction>[] = [
         cell: (props) => (
             // temporary basic tooltip
             <div>
-                <span title={String(props.getValue())}>{formatRelativeDate(new Date(String(props.getValue())))}</span>
+                <span title={(props.getValue() as Date).toLocaleDateString(undefined, hoverDateFormat)}>{formatRelativeDate(props.getValue() as Date)}</span>
             </div>
         ),
     },
     { header: "Merchant", accessorKey: "merchant_company" },
     { header: "Amount", accessorKey: "amount" },
-    { header: "Description", accessorKey: "description" },
+    { header: "Description", accessorKey: "description" }, // TODO maxSize: 100 and add ellipsis
     { header: "Category", accessorKey: "category" },
     { header: "Payment Account", accessorKey: "payment_account" },
     { header: "Transaction Method", accessorKey: "transaction_method" },

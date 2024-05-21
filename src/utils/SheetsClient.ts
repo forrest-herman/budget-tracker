@@ -107,8 +107,8 @@ export default class SheetsClient {
             requestBody: {
                 values: transactions.map((transaction) => [
                     // TODO: modify columns to match the sheet
-                    format(transaction.date, "yyyy-MM-dd") || "", // Used to show Month
-                    format(transaction.date, "yyyy-MM-dd") || "", // Used to show full date
+                    transaction.date.toLocaleDateString() || "", // Used to show Month
+                    transaction.date.toLocaleDateString() || "", // Used to show full date
                     transaction.merchant_company || "",
                     transaction.amount || "",
                     transaction.description || "",
@@ -152,18 +152,20 @@ export default class SheetsClient {
 
         const res = await this.query(query);
 
-        // console.log(res);
+        console.log(res);
 
         //convert dates to date objects
         const transactions = res.map((entry: any) => {
             // TODO parse the date into a proper date object?
             //Date usually has the form "Date(year,month,date)" (if the user didn't change anything)
-            let [year, month, day] = entry["DATE"].substring(5, entry["DATE"].length - 1).split(",");
-            month = parseInt(month);
-            month = month + 1;
+            let [year, monthIndex, day] = entry["DATE"].substring(5, entry["DATE"].length - 1).split(",");
+            monthIndex = parseInt(monthIndex);
+            const month = monthIndex + 1;
+            let date = new Date(year, monthIndex, day);
+            let dateLocal = date.toLocaleDateString();
 
             return {
-                date: `${year}-${month < 10 ? "0" + month : month}-${day < 10 ? "0" + day : day}`,
+                date: date, // `${year}-${month < 10 ? "0" + month : month}-${day < 10 ? "0" + day : day}`,
                 merchant_company: entry["MERCHANT/COMPANY"],
                 amount: entry["AMOUNT"],
                 description: entry["DESCRIPTION"],
