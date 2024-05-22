@@ -148,11 +148,7 @@ export default class SheetsClient {
             query += ` limit ${options.limit}`;
         }
 
-        console.log(query);
-
         const res = await this.query(query);
-
-        console.log(res);
 
         //convert dates to date objects
         const transactions = res.map((entry: any) => {
@@ -167,7 +163,7 @@ export default class SheetsClient {
             return {
                 date: date, // `${year}-${month < 10 ? "0" + month : month}-${day < 10 ? "0" + day : day}`,
                 merchant_company: entry["MERCHANT/COMPANY"],
-                amount: entry["AMOUNT"],
+                amount: entry["AMOUNT"] || 0,
                 description: entry["DESCRIPTION"],
                 category: entry["CATEGORY"],
                 payment_account: entry["PAYMENT ACCOUNT"],
@@ -177,7 +173,7 @@ export default class SheetsClient {
         });
         return transactions.map((transaction) => ({
             ...transaction,
-            date: new Date(transaction.date),
+            date: new Date(transaction.date), // TODO: ensure proper timezone
         }));
     }
 
@@ -312,8 +308,11 @@ export default class SheetsClient {
         const tableData = jsonData.table;
         const columns = tableData.cols.map((col: any) => col.label);
 
+        // console.log(tableData);
+
         //if the column labels are empty, then there is only a single row of column titles in the sheet
-        if (columns.some((label: string) => label === "")) {
+        if (columns.every((label: string) => label === "")) {
+            console.log("Data incorectly formatted");
             return []; //sheets had no transactions
         }
 
