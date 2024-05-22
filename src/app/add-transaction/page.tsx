@@ -258,7 +258,7 @@ const AddTransactionForm = () => {
                                 </FormItem>
                             )}
                         />
-                        {categories[form.getValues().category]?.length > 0 && (
+                        {(categories as Record<string, string[]>)[form.getValues().category as string]?.length > 0 && (
                             <FormField
                                 control={form.control}
                                 name='subcategory'
@@ -278,7 +278,7 @@ const AddTransactionForm = () => {
                                             </FormControl>
                                             <SelectContent>
                                                 {/* TODO: type and autocomplete fuzzy */}
-                                                {categories[form.getValues().category]?.map((key, index) => (
+                                                {(categories as Record<string, string[]>)[form.getValues().category as string]?.map((key, index) => (
                                                     <SelectItem key={index} value={key}>
                                                         {key}
                                                     </SelectItem>
@@ -340,7 +340,7 @@ const AddTransactionForm = () => {
                                         </FormControl>
                                         <SelectContent>
                                             {/* TODO: autoselect? */}
-                                            {paymentMethods[form.getValues().transaction_method]?.map((key, index) => (
+                                            {(paymentMethods as Record<string, string[]>)[form.getValues().transaction_method]?.map((key, index) => (
                                                 <SelectItem key={index} value={key}>
                                                     {key}
                                                 </SelectItem>
