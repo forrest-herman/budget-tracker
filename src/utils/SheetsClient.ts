@@ -181,6 +181,34 @@ export default class SheetsClient {
         }));
     }
 
+    // Categories
+
+    async getCategories() {
+        console.log("get categories");
+
+        const res = await this.sheets.spreadsheets.values.get({
+            spreadsheetId: this.spreadsheet_id,
+            range: "CONFIG: Categories!A:Z",
+        });
+
+        if (!res.data.values) return [];
+
+        var categories: Record<string, string[]> = {};
+        res.data.values.forEach((row: any, index: number, array: any[][]) => {
+            if (index === 0) return; // don't include headers
+
+            let headers = array[0];
+            headers.forEach((value: string, i: number) => {
+                if (!categories.hasOwnProperty(value)) {
+                    categories[value] = [];
+                }
+                if (row[i]) categories[value].push(row[i]);
+            });
+        });
+
+        return categories;
+    }
+
     async getTotalSpending(options?: { startDate?: Date; endDate?: Date }): Promise<number> {
         let query = "select sum(D)";
 
@@ -229,6 +257,36 @@ export default class SheetsClient {
         }
         return spendingByCategory;
     }
+
+    // Payment Methods
+
+    async getPaymentMethods() {
+        console.log("get payment methods");
+
+        const res = await this.sheets.spreadsheets.values.get({
+            spreadsheetId: this.spreadsheet_id,
+            range: "CONFIG: Payment Methods!A:Z",
+        });
+
+        if (!res.data.values) return [];
+
+        var paymentMethods: Record<string, string[]> = {};
+        res.data.values.forEach((row: any, i: number, array: any[][]) => {
+            if (i === 0) return; // don't include headers
+
+            let headers = array[0];
+            headers.forEach((value: string, i: number) => {
+                if (!paymentMethods.hasOwnProperty(value)) {
+                    paymentMethods[value] = [];
+                }
+                if (row[i]) paymentMethods[value].push(row[i]);
+            });
+        });
+
+        return paymentMethods;
+    }
+
+    // general query
 
     async query(query: string): Promise<any[]> {
         const url =

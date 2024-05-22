@@ -22,6 +22,8 @@ import { useState } from "react";
 
 const AddTransactionForm = () => {
     const [calendarOpen, setCalendarOpen] = useState(false);
+    const [categories, setCategories] = useState({});
+    const [paymentMethods, setPaymentMethods] = useState({});
 
     const form = useForm<TransactionForm>({
         resolver: zodResolver(TransactionFormSchema),
@@ -32,6 +34,7 @@ const AddTransactionForm = () => {
             amount: undefined,
             description: "",
             category: "",
+            subcategory: "",
             transaction_method: "credit",
             payment_account: "",
             reimbursed: false,
@@ -65,6 +68,44 @@ const AddTransactionForm = () => {
             })
             .catch((resp) => {
                 //TODO: handle error
+            });
+    }
+
+    function loadCategories() {
+        // TODO: run on page load
+        fetch("/api/categories", {
+            method: "get",
+            headers: {
+                "content-type": "application/json",
+                accept: "application/json",
+            },
+        })
+            .then(async (resp) => {
+                const body = await resp.json();
+                // store the categories in state
+                setCategories(body);
+            })
+            .catch((resp) => {
+                // console.log(resp)
+            });
+    }
+
+    function loadPaymentMethods() {
+        // TODO: run on page load
+        fetch("/api/paymentMethods", {
+            method: "get",
+            headers: {
+                "content-type": "application/json",
+                accept: "application/json",
+            },
+        })
+            .then(async (resp) => {
+                const body = await resp.json();
+                // store the payment methods in state
+                setPaymentMethods(body);
+            })
+            .catch((resp) => {
+                // console.log(resp)
             });
     }
 
@@ -134,7 +175,7 @@ const AddTransactionForm = () => {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Merchant / Company</FormLabel>
-                                {/* TODO: auto-complete */}
+                                {/* TODO: auto-complete from previous entries */}
                                 <FormControl>
                                     <Input {...field} />
                                 </FormControl>
@@ -181,78 +222,136 @@ const AddTransactionForm = () => {
                             </FormItem>
                         )}
                     />
-                    <FormField
-                        control={form.control}
-                        name='category'
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Transaction Category</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger className='w-[180px]'>
-                                            <SelectValue placeholder='Select Category' />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {/* TODO: retrieve from excel */}
-                                        <SelectItem value='food'>Food</SelectItem>
-                                        <SelectItem value='transportation'>Transportation</SelectItem>
-                                        <SelectItem value='housing'>Housing</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
+                    <div className='flex'>
+                        <FormField
+                            control={form.control}
+                            name='category'
+                            render={({ field }) => (
+                                <FormItem className='flex-auto'>
+                                    <FormLabel>Transaction Category</FormLabel>
+                                    <Select
+                                        onValueChange={(value) => {
+                                            field.onChange(value);
+                                            form.resetField("subcategory");
+                                        }}
+                                        value={field.value}
+                                        onOpenChange={(isOpening) => {
+                                            // debounce
+                                            if (isOpening) loadCategories();
+                                        }}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className='w-[180px]'>
+                                                <SelectValue placeholder='Select Category' />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {/* TODO: type and autocomplete fuzzy */}
+                                            {Object.keys(categories).map((key, index) => (
+                                                <SelectItem key={index} value={key}>
+                                                    {key}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        {(categories as Record<string, string[]>)[form.getValues().category as string]?.length > 0 && (
+                            <FormField
+                                control={form.control}
+                                name='subcategory'
+                                render={({ field }) => (
+                                    <FormItem className='flex-auto'>
+                                        <FormLabel>Subcategory</FormLabel>
+                                        <Select
+                                            onValueChange={(value) => {
+                                                field.onChange(value);
+                                            }}
+                                            value={field.value}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger className='w-[180px]'>
+                                                    <SelectValue placeholder='Select Subcategory' />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {/* TODO: type and autocomplete fuzzy */}
+                                                {(categories as Record<string, string[]>)[form.getValues().category as string]?.map((key, index) => (
+                                                    <SelectItem key={index} value={key}>
+                                                        {key}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                         )}
-                    />
-                    {/* TODO: put both transaction_method and payment account side by side */}
-                    <FormField
-                        control={form.control}
-                        name='transaction_method'
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Payment Method</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder='Choose a payment method' />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {/* TODO: retrieve options from excel */}
-                                        <SelectItem value='credit'>Credit</SelectItem>
-                                        <SelectItem value='e-transfer'>E-Transfer</SelectItem>
-                                        <SelectItem value='debit'>Debit</SelectItem>
-                                        <SelectItem value='cash'>Cash</SelectItem>
-                                        <SelectItem value='cheque'>Cheque</SelectItem>
-                                        <SelectItem value='direct_deposit'>Direct Deposit</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name='payment_account'
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Payment Account</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder='Choose a payment account' />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {/* TODO: retrieve from excel and filter based on transaction_method */}
-                                        <SelectItem value='1'>Tangerine MasterCard</SelectItem>
-                                        <SelectItem value='2'>Scotiabank VISA</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    </div>
+                    <div className='flex'>
+                        <FormField
+                            control={form.control}
+                            name='transaction_method'
+                            render={({ field }) => (
+                                <FormItem className='flex-auto'>
+                                    <FormLabel>Payment Method</FormLabel>
+                                    <Select
+                                        onValueChange={(value) => {
+                                            field.onChange(value);
+                                            form.resetField("payment_account");
+                                        }}
+                                        value={field.value}
+                                        onOpenChange={() => {
+                                            loadPaymentMethods();
+                                        }}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger className='w-[180px]'>
+                                                <SelectValue placeholder='Choose a payment method' />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {/* TODO: type and autocomplete fuzzy */}
+                                            {Object.keys(paymentMethods).map((key, index) => (
+                                                <SelectItem key={index} value={key}>
+                                                    {key}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name='payment_account'
+                            render={({ field }) => (
+                                <FormItem className='flex-auto'>
+                                    <FormLabel>Payment Account</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger className='w-[180px]'>
+                                                <SelectValue placeholder='Choose a payment account' />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {/* TODO: autoselect? */}
+                                            {(paymentMethods as Record<string, string[]>)[form.getValues().transaction_method]?.map((key, index) => (
+                                                <SelectItem key={index} value={key}>
+                                                    {key}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
                     <FormField
                         control={form.control}
                         name='reimbursed'
