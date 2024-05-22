@@ -18,21 +18,9 @@ const formatRelativeLocale: { [key: string]: string } = {
 const locale = {
     ...enGB,
     formatRelative: (token: string) => formatRelativeLocale[token],
-    localize: {
-        ordinalNumber: (number: number) => `${number}`,
-        era: () => "",
-        quarter: () => "",
-        month: () => "",
-        day: () => "",
-        dayPeriod: () => "",
-    },
-    formatLong: {
-        date: () => "",
-        time: () => "",
-        dateTime: () => "",
-    },
 };
 
 export const formatRelativeDate = (date: string | number | Date, baseDate: string | number | Date = new Date()) => {
+    // @ts-ignore
     return formatRelative(date, baseDate, { locale });
 };
