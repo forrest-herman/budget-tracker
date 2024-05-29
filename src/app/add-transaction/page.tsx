@@ -31,16 +31,16 @@ const AddTransactionForm = () => {
             transaction_type: "expense",
             date: new Date(),
             merchant_company: "",
-            amount: undefined,
+            amount: "" as unknown as number, // necessary for form reset to work
             description: "",
             category: "",
             subcategory: "",
-            transaction_method: "credit",
+            transaction_method: "Credit Card",
             payment_account: "",
             reimbursed: false,
         },
     });
-
+    
     function onSubmit(values: TransactionForm) {
         console.log("form submitted with ", values);
         toast({
