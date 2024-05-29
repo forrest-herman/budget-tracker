@@ -152,16 +152,16 @@ export default class SheetsClient {
 
         //convert dates to date objects
         const transactions = res.map((entry: any) => {
-            // TODO parse the date into a proper date object?
-            //Date usually has the form "Date(year,month,date)" (if the user didn't change anything)
+            // Sheets date usually has the form `Date(year,month,date)` (if the user didn't change anything)
             let [year, monthIndex, day] = entry["DATE"].substring(5, entry["DATE"].length - 1).split(",");
             monthIndex = parseInt(monthIndex);
             const month = monthIndex + 1;
-            let date = new Date(year, monthIndex, day);
-            let dateLocal = date.toLocaleDateString();
+            // let date = new Date(year, monthIndex, day); // uses local server timezone
+            let dateFromUTC = new Date(Date.UTC(year, monthIndex, day)); // uses UTC timezone
+            // console.log(entry["DATE"], "toString", dateFromUTC.toString(), "ISO", dateFromUTC.toISOString(), "UTC", dateFromUTC.toUTCString());
 
             return {
-                date: date, // `${year}-${month < 10 ? "0" + month : month}-${day < 10 ? "0" + day : day}`,
+                date: dateFromUTC,
                 merchant_company: entry["MERCHANT/COMPANY"],
                 amount: entry["AMOUNT"] || 0,
                 description: entry["DESCRIPTION"],
@@ -171,10 +171,7 @@ export default class SheetsClient {
                 reimbursed: entry["REIMBURSED"],
             };
         });
-        return transactions.map((transaction) => ({
-            ...transaction,
-            date: new Date(transaction.date), // TODO: ensure proper timezone
-        }));
+        return transactions;
     }
 
     // Categories
