@@ -10,8 +10,6 @@ const hoverDateFormat: { [id: string]: string } = {
     year: "numeric",
     month: "short",
     day: "numeric",
-    hour: "numeric",
-    timeZoneName: "short",
     timeZone: "UTC",
 };
 
