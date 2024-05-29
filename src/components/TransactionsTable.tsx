@@ -10,6 +10,18 @@ const hoverDateFormat: { [id: string]: string } = {
     year: "numeric",
     month: "short",
     day: "numeric",
+    hour: "numeric",
+    timeZoneName: "short",
+    timeZone: "UTC",
+};
+
+const fixDate = (date: Date) => {
+    // display date relative to UTC
+    const hoursOff = date.getTimezoneOffset() / 60;
+    // console.log(date, date.getHours(), "hoursOff", hoursOff);
+    const newDate = new Date(date.setHours(date.getHours() + hoursOff));
+    // console.log("newDate", newDate);
+    return newDate;
 };
 
 const columns: ColumnDef<Transaction>[] = [
@@ -20,7 +32,7 @@ const columns: ColumnDef<Transaction>[] = [
         cell: (props) => (
             // temporary basic tooltip
             <div>
-                <span title={(props.getValue() as Date).toLocaleDateString(undefined, hoverDateFormat)}>{formatRelativeDate(props.getValue() as Date)}</span>
+                <span title={(props.getValue() as Date).toLocaleDateString(undefined, hoverDateFormat)}>{formatRelativeDate(fixDate(props.getValue() as Date))}</span>
             </div>
         ),
     },
