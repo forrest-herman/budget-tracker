@@ -16,9 +16,7 @@ const hoverDateFormat: { [id: string]: string } = {
 const fixDate = (date: Date) => {
     // display date relative to UTC
     const hoursOff = date.getTimezoneOffset() / 60;
-    // console.log(date, date.getHours(), "hoursOff", hoursOff);
     const newDate = new Date(date.setHours(date.getHours() + hoursOff));
-    // console.log("newDate", newDate);
     return newDate;
 };
 
