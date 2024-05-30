@@ -24,3 +24,29 @@ export const formatRelativeDate = (date: string | number | Date, baseDate: strin
     // @ts-ignore
     return formatRelative(date, baseDate, { locale });
 };
+
+export function convertLocalDateToUTCIgnoringTimezone(date: Date) {
+    const timestamp = Date.UTC(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate()
+        //   date.getHours(),
+        //   date.getMinutes(),
+        //   date.getSeconds(),
+        //   date.getMilliseconds(),
+    );
+
+    return new Date(timestamp);
+}
+
+export function convertUTCToLocalDateIgnoringTimezone(utcDate: Date) {
+    return new Date(
+        utcDate.getUTCFullYear(),
+        utcDate.getUTCMonth(),
+        utcDate.getUTCDate()
+        //   utcDate.getUTCHours(),
+        //   utcDate.getUTCMinutes(),
+        //   utcDate.getUTCSeconds(),
+        //   utcDate.getUTCMilliseconds(),
+    );
+}

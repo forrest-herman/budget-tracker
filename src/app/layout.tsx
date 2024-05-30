@@ -10,7 +10,7 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => {
     const [isSettingsModalVisible, setIsSettingModalVisible] = useState(false);
 
     return (
-        <html lang='en'>
+        <html lang='en' suppressHydrationWarning>
             <head>
                 <title>The Budget | Dashboard</title>
             </head>
