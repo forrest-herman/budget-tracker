@@ -44,8 +44,8 @@ const columns: ColumnDef<Transaction>[] = [
     },
     { header: "Description", accessorKey: "description" }, // TODO maxSize: 100 and add ellipsis
     { header: "Category", accessorKey: "category" },
-    { header: "Payment Account", accessorKey: "payment_account" },
-    { header: "Transaction Method", accessorKey: "transaction_method" },
+    // { header: "Payment Account", accessorKey: "payment_account" },
+    // { header: "Transaction Method", accessorKey: "transaction_method" },
 ];
 
 const TransactionsTable = ({ transactions }: { transactions: Transaction[] }) => {
