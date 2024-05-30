@@ -2,8 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { format, formatRelative } from "date-fns";
-import { formatRelativeDate } from "@/utils/dateUtils";
+import { formatRelativeDate, convertLocalDateToUTCIgnoringTimezone } from "@/utils/dateUtils";
 
 import { cn } from "@/utils/shadcn";
 import { Button } from "@/components/ui/button";
@@ -29,7 +28,7 @@ const AddTransactionForm = () => {
         resolver: zodResolver(TransactionFormSchema),
         defaultValues: {
             transaction_type: "expense",
-            date: new Date(),
+            date: new Date(new Date().setHours(0, 0, 0, 0)), // midnight today
             merchant_company: "",
             amount: "" as unknown as number, // necessary for form reset to work
             description: "",
@@ -51,6 +50,9 @@ const AddTransactionForm = () => {
                 </pre>
             ),
         });
+
+        // format the date to UTC for server processing
+        values = { ...values, date: convertLocalDateToUTCIgnoringTimezone(values.date) };
 
         // Do something with the form values.
         //show errors and
