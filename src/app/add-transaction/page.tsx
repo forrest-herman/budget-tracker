@@ -16,7 +16,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { TransactionFormSchema } from "@/utils/TransactionsValidator";
-import type { TransactionForm } from "@/utils/TransactionsValidator";
+import type { Transaction, TransactionForm } from "@/utils/TransactionsValidator";
 import { useState } from "react";
 
 const AddTransactionForm = () => {
@@ -30,8 +30,11 @@ const AddTransactionForm = () => {
             transaction_type: "expense",
             date: new Date(new Date().setHours(0, 0, 0, 0)), // midnight today
             merchant_company: "",
+            location: "",
             amount: "" as unknown as number, // necessary for form reset to work
             description: "",
+            unit_count: "" as unknown as number, // necessary for form reset to work
+            unit_type: "litres", // TODO: this should be based on category
             category: "",
             subcategory: "",
             transaction_method: "Credit Card",
@@ -39,7 +42,7 @@ const AddTransactionForm = () => {
             reimbursed: false,
         },
     });
-    
+
     function onSubmit(values: TransactionForm) {
         console.log("form submitted with ", values);
         toast({
@@ -51,8 +54,12 @@ const AddTransactionForm = () => {
             ),
         });
 
-        // format the date to UTC for server processing
-        values = { ...values, date: convertLocalDateToUTCIgnoringTimezone(values.date) };
+        // format the date to UTC for server processing and add unit price column
+        const transactionValues: Transaction = {
+            ...values,
+            date: convertLocalDateToUTCIgnoringTimezone(values.date),
+            unit_price: values.unit_count ? values.amount / values.unit_count : undefined,
+        };
 
         // Do something with the form values.
         //show errors and
@@ -61,7 +68,7 @@ const AddTransactionForm = () => {
             headers: {
                 "content-type": "application/json",
             },
-            body: JSON.stringify([values]),
+            body: JSON.stringify([transactionValues]),
         })
             .then((resp) => {
                 //TODO: handle response
@@ -188,6 +195,20 @@ const AddTransactionForm = () => {
                     />
                     <FormField
                         control={form.control}
+                        name='location'
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Location</FormLabel>
+                                {/* TODO: auto-complete from previous entries and add ability to get device location */}
+                                <FormControl>
+                                    <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
                         name='amount'
                         render={({ field }) => (
                             <FormItem>
@@ -293,6 +314,55 @@ const AddTransactionForm = () => {
                             />
                         )}
                     </div>
+                    {(form.getValues().subcategory as string) === "Gas" && (
+                        <div className='flex'>
+                            <FormField
+                                control={form.control}
+                                name='unit_count'
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Unit Count</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                // inputMode='numeric'
+                                                // pattern='[0-9]*'
+                                                type='text'
+                                                placeholder='eg 23.4'
+                                                {...field}
+                                                // onChange={(e) => {
+                                                //     field.onChange(e);
+                                                //     console.log("format:", e.target.value);
+                                                // }}
+                                            />
+                                            {/* TODO: add better auto-formatting to the $ amount. Maybe use this? https://gist.github.com/Sutil/5285f2e5a912dcf14fc23393dac97fed */}
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name='unit_type'
+                                render={({ field }) => (
+                                    <FormItem className='flex-auto'>
+                                        <FormLabel>Units</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger className='w-[60px]'>
+                                                    <SelectValue placeholder='Units' />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {/* TODO: pull from public database of units */}
+                                                <SelectItem value='litres'>L</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    )}
                     <div className='flex'>
                         <FormField
                             control={form.control}
