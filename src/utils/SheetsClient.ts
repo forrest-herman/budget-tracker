@@ -106,10 +106,11 @@ export default class SheetsClient {
             valueInputOption: "USER_ENTERED",
             requestBody: {
                 values: transactions.map((transaction) => [
-                    // TODO: modify columns to match the sheet
+                    // order columns to match the sheet layout
                     transaction.date.toLocaleDateString() || "", // Used to show Month
                     transaction.date.toLocaleDateString() || "", // Used to show full date
                     transaction.merchant_company || "",
+                    transaction.location || "",
                     transaction.amount || "",
                     transaction.description || "",
                     transaction.category || "",
@@ -117,6 +118,9 @@ export default class SheetsClient {
                     transaction.payment_account || "",
                     transaction.transaction_method || "",
                     transaction.reimbursed || false,
+                    transaction.unit_count || "",
+                    transaction.unit_type || "",
+                    transaction.unit_price || "",
                 ]),
             },
         });
@@ -163,6 +167,7 @@ export default class SheetsClient {
             return {
                 date: dateFromUTC,
                 merchant_company: entry["MERCHANT/COMPANY"],
+                location: entry["LOCATION"],
                 amount: entry["AMOUNT"] || 0,
                 description: entry["DESCRIPTION"],
                 category: entry["CATEGORY"],
@@ -203,7 +208,7 @@ export default class SheetsClient {
     }
 
     async getTotalSpending(options?: { startDate?: Date; endDate?: Date }): Promise<number> {
-        let query = "select sum(D)";
+        let query = "select sum(E)";
 
         if (options?.startDate && options?.endDate) {
             // Both dates are provided
@@ -225,7 +230,7 @@ export default class SheetsClient {
     }
 
     async getCategorySpending(options?: { startDate?: Date; endDate?: Date }): Promise<{ [category: string]: number }> {
-        let query = "select F, sum(D)";
+        let query = "select G, sum(E)";
         if (options?.startDate && options?.endDate) {
             // Both dates are provided
             query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= B and B <= date '${options.endDate.toISOString().substring(0, 10)}'`;
@@ -236,7 +241,7 @@ export default class SheetsClient {
             // Only end date is provided
             query += ` where B <= date '${options.endDate.toISOString().substring(0, 10)}'`;
         }
-        query += "group by F";
+        query += "group by G";
 
         const res = await this.query(query);
         const spendingByCategory: { [category: string]: number } = {};
