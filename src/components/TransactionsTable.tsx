@@ -1,8 +1,7 @@
 "use client";
 import { ColumnDef } from "@tanstack/react-table";
-import { Transaction } from "@/utils/TransactionsValidator";
+import { ExpenseTransaction } from "@/utils/TransactionsValidator";
 import { DataTable } from "./DataTable";
-import { Checkbox } from "./ui/checkbox";
 import { formatRelativeDate } from "@/utils/dateUtils";
 
 const hoverDateFormat: { [id: string]: string } = {
@@ -20,7 +19,7 @@ const fixDate = (date: Date) => {
     return newDate;
 };
 
-const columns: ColumnDef<Transaction>[] = [
+const columns: ColumnDef<ExpenseTransaction>[] = [
     {
         header: "Date",
         accessorKey: "date",
@@ -48,7 +47,7 @@ const columns: ColumnDef<Transaction>[] = [
     // { header: "Transaction Method", accessorKey: "transaction_method" },
 ];
 
-const TransactionsTable = ({ transactions }: { transactions: Transaction[] }) => {
+const TransactionsTable = ({ transactions }: { transactions: ExpenseTransaction[] }) => {
     return <DataTable columns={columns} data={transactions} />;
 };
 

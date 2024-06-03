@@ -145,7 +145,7 @@ export default class SheetsClient {
 
     // TODO: edit/remove transaction
 
-    async getTransactions(options?: { start_date?: Date; end_date?: Date; limit?: number }): Promise<Transaction[]> {
+    async getTransactions(options?: { start_date?: Date; end_date?: Date; limit?: number }): Promise<ExpenseTransaction[]> {
         console.log("fetching Transactions");
 
         let query = "select *";
