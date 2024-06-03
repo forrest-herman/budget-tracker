@@ -1,7 +1,7 @@
 import TransactionsTable from "@/components/TransactionsTable";
 import { Progress } from "@/components/ui/progress";
 import { useSheetsClient } from "@/utils/hooks";
-import { Transaction } from "@/utils/TransactionsValidator";
+import { ExpenseTransaction } from "@/utils/TransactionsValidator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const DashboardPage = async () => {
@@ -14,7 +14,7 @@ const DashboardPage = async () => {
     const MAX_SPENDINGS = 500;
 
     //run this first to check if there is any data in the spreadsheet (no data will cause problems for other queries)
-    let recent_transactions: Transaction[] = [];
+    let recent_transactions: ExpenseTransaction[] = [];
     let total_spending = 0;
     let spending_by_category = {};
     let error = true;
