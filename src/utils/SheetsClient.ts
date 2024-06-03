@@ -1,8 +1,12 @@
 import { OAuth2Client } from "google-auth-library";
 import { google, sheets_v4 } from "googleapis";
 import { extractDataFromQueryResponse, initGoogleAuth, initSheetsClient } from "./googleUtils";
-import { Transaction } from "./TransactionsValidator";
+import { ExpenseTransaction, IncomneTransaction } from "./TransactionsValidator";
 import { format } from "date-fns";
+
+// TODO: use named ranges for sheets https://developers.google.com/sheets/api/guides/concepts#cell
+const expenseSheet = "Expenses";
+const incomeSheet = "Income";
 
 export default class SheetsClient {
     private auth: OAuth2Client;
@@ -25,30 +29,44 @@ export default class SheetsClient {
         console.log("get all transactions");
 
         // TODO: get all expenses and income
-
-        const res = await this.sheets.spreadsheets.values.get({
+        const expensesResult = await this.sheets.spreadsheets.values.get({
             spreadsheetId: this.spreadsheet_id,
-            range: "Transactions!A2:Z", // TODO: Sheet name
+            range: expenseSheet,
         });
-        //make them into objects
-        if (!res.data.values) return [];
-        return res.data.values.map((row: any) => {
-            return {
-                date: row[0],
-                bank_description: row[1],
-                description: row[2],
-                amount: row[3],
-                category: row[4],
-                account: row[5],
-            };
+
+        const incomeResult = await this.sheets.spreadsheets.values.get({
+            spreadsheetId: this.spreadsheet_id,
+            range: incomeSheet,
         });
+
+        const expenses = expensesResult.data.values;
+        const incomeItems = incomeResult.data.values;
+
+        // TODO: split off column headers and make them into objects
+        console.log(expenses);
+        console.log(incomeItems);
+
+        // make them into objects
+        // if (!res.data.values) return [];
+        // return res.data.values.map((row: any) => {
+        //     return {
+        //         // TODO: named ranges
+        //         date: row[1],
+        //         bank_description: row[1],
+        //         description: row[2],
+        //         amount: row[3],
+        //         category: row[4],
+        //         account: row[5],
+        //     };
+        // });
     }
 
     /* 
     compares given transactions with the ones already in the sheet to ensure they are inserted in order
     */
-    async compareTransactions(transactions: Transaction[]): Promise<Transaction[]> {
+    async compareTransactions(transactions: ExpenseTransaction[], type: "expense" | "income" = "expense"): Promise<ExpenseTransaction[]> {
         // TODO: double check this function
+        // TODO: add income ability too
         console.log("comparing:", transactions);
         // sort the transactions by date
         transactions.sort((a: any, b: any) => {
@@ -99,10 +117,10 @@ export default class SheetsClient {
         return new_transactions;
     }
 
-    async appendTransactions(transactions: any[]) {
+    async appendTransactions(transactions: any[], isExpense: boolean = true) {
         const res = await this.sheets.spreadsheets.values.append({
             spreadsheetId: this.spreadsheet_id,
-            range: "A1:Z",
+            range: isExpense ? expenseSheet : incomeSheet,
             valueInputOption: "USER_ENTERED",
             requestBody: {
                 values: transactions.map((transaction) => [
@@ -117,10 +135,10 @@ export default class SheetsClient {
                     transaction.subcategory || "",
                     transaction.payment_account || "",
                     transaction.transaction_method || "",
-                    transaction.reimbursed || false,
-                    transaction.unit_count || "",
-                    transaction.unit_type || "",
-                    transaction.unit_price || "",
+                    isExpense ? transaction.reimbursed_amount : transaction.pay_period_start,
+                    isExpense ? transaction.unit_count : transaction.pay_period_start,
+                    isExpense ? transaction.unit_type : "",
+                    isExpense ? transaction.unit_price : "",
                 ]),
             },
         });
@@ -180,13 +198,46 @@ export default class SheetsClient {
     }
 
     // Categories
+    // TODO: type these functions
+    async getCategories(type: "expense" | "income" = "expense") {
+        console.log("get categories" + type);
 
-    async getCategories() {
-        console.log("get categories");
+        let range: string;
+        if (type === "expense") {
+            range = "CONFIG: Categories";
+        } else {
+            range = "CONFIG: Income Categories";
+        }
 
         const res = await this.sheets.spreadsheets.values.get({
             spreadsheetId: this.spreadsheet_id,
-            range: "CONFIG: Categories!A:Z",
+            range: range,
+        });
+
+        if (!res.data.values) return [];
+
+        var categories: Record<string, string[]> = {};
+        res.data.values.forEach((row: any, index: number, array: any[][]) => {
+            if (index === 0) return; // don't include headers
+
+            let headers = array[0];
+            headers.forEach((value: string, i: number) => {
+                if (!categories.hasOwnProperty(value)) {
+                    categories[value] = [];
+                }
+                if (row[i]) categories[value].push(row[i]);
+            });
+        });
+
+        return categories;
+    }
+
+    async getIncomeCategories() {
+        console.log("get income categories");
+
+        const res = await this.sheets.spreadsheets.values.get({
+            spreadsheetId: this.spreadsheet_id,
+            range: "CONFIG: Income Categories",
         });
 
         if (!res.data.values) return [];
@@ -263,7 +314,7 @@ export default class SheetsClient {
 
         const res = await this.sheets.spreadsheets.values.get({
             spreadsheetId: this.spreadsheet_id,
-            range: "CONFIG: Payment Methods!A:Z",
+            range: "CONFIG: Payment Methods",
         });
 
         if (!res.data.values) return [];

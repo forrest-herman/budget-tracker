@@ -16,13 +16,20 @@ import { toast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { TransactionFormSchema } from "@/utils/TransactionsValidator";
-import type { Transaction, TransactionForm } from "@/utils/TransactionsValidator";
-import { useState } from "react";
+import type { TransactionForm } from "@/utils/TransactionsValidator";
+import { useEffect, useState } from "react";
 
 const AddTransactionForm = () => {
     const [calendarOpen, setCalendarOpen] = useState(false);
-    const [categories, setCategories] = useState({});
+    const [activeCategories, setActiveCategories] = useState({});
+    const [allCategories, setAllCategories] = useState<{ [key: string]: Object }>({ expense: {}, income: {} });
     const [paymentMethods, setPaymentMethods] = useState({});
+
+    // load sheet data on page render
+    useEffect(() => {
+        loadCategories();
+        loadPaymentMethods();
+    }, []);
 
     const form = useForm<TransactionForm>({
         resolver: zodResolver(TransactionFormSchema),
@@ -34,12 +41,12 @@ const AddTransactionForm = () => {
             amount: "" as unknown as number, // necessary for form reset to work
             description: "",
             unit_count: "" as unknown as number, // necessary for form reset to work
-            unit_type: "litres", // TODO: this should be based on category
+            unit_type: "",
             category: "",
             subcategory: "",
             transaction_method: "Credit Card",
             payment_account: "",
-            reimbursed: false,
+            reimbursed_amount: "" as unknown as number, // necessary for form reset to work
         },
     });
 
@@ -55,15 +62,19 @@ const AddTransactionForm = () => {
         });
 
         // format the date to UTC for server processing and add unit price column
-        const transactionValues: Transaction = {
+        const transactionValues = {
             ...values,
             date: convertLocalDateToUTCIgnoringTimezone(values.date),
             unit_price: values.unit_count ? values.amount / values.unit_count : undefined,
         };
 
-        // Do something with the form values.
-        //show errors and
-        fetch("/api/transactions", {
+        let url: string;
+        if (values.transaction_type === "income") {
+            url = "/api/income";
+        } else url = "/api/transactions";
+
+        // TODO: show errors
+        fetch(url, {
             method: "post",
             headers: {
                 "content-type": "application/json",
@@ -92,7 +103,9 @@ const AddTransactionForm = () => {
             .then(async (resp) => {
                 const body = await resp.json();
                 // store the categories in state
-                setCategories(body);
+                setAllCategories(body);
+                if (form.getValues("transaction_type") === "income") setActiveCategories(body?.income);
+                else setActiveCategories(body?.expense);
             })
             .catch((resp) => {
                 // console.log(resp)
@@ -101,7 +114,7 @@ const AddTransactionForm = () => {
 
     function loadPaymentMethods() {
         // TODO: run on page load
-        fetch("/api/paymentMethods", {
+        fetch("/api/payment-methods", {
             method: "get",
             headers: {
                 "content-type": "application/json",
@@ -119,9 +132,9 @@ const AddTransactionForm = () => {
     }
 
     return (
-        // TODO: vertical padding and scroll
+        // TODO: vertical padding and scroll, especially on mobile
         <div className='w-5/6 h-full'>
-            <h1 className='text-3xl pt-4'>New Transaction</h1>
+            <h1 className='text-3xl pt-4'>New {form.getValues("transaction_type")} Transaction</h1>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8 py-5'>
                     <FormField
@@ -130,7 +143,15 @@ const AddTransactionForm = () => {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Transaction Type</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
+                                <Select
+                                    onValueChange={(value) => {
+                                        field.onChange(value);
+                                        form.setValue("transaction_method", value === "income" ? "Direct Deposit" : "Credit Card");
+                                        setActiveCategories(allCategories[value]);
+                                        form.resetField("category");
+                                    }}
+                                    value={field.value}
+                                >
                                     <FormControl>
                                         <SelectTrigger className='w-[180px]'>
                                             <SelectValue placeholder='Expense/Income' />
@@ -270,7 +291,7 @@ const AddTransactionForm = () => {
                                         </FormControl>
                                         <SelectContent>
                                             {/* TODO: type and autocomplete fuzzy */}
-                                            {Object.keys(categories).map((key, index) => (
+                                            {Object.keys(activeCategories).map((key, index) => (
                                                 <SelectItem key={index} value={key}>
                                                     {key}
                                                 </SelectItem>
@@ -281,7 +302,7 @@ const AddTransactionForm = () => {
                                 </FormItem>
                             )}
                         />
-                        {(categories as Record<string, string[]>)[form.getValues().category as string]?.length > 0 && (
+                        {(activeCategories as Record<string, string[]>)[form.getValues().category as string]?.length > 0 && (
                             <FormField
                                 control={form.control}
                                 name='subcategory'
@@ -291,6 +312,8 @@ const AddTransactionForm = () => {
                                         <Select
                                             onValueChange={(value) => {
                                                 field.onChange(value);
+                                                if (value === "Gas") form.setValue("unit_type", "litres");
+                                                else form.setValue("unit_type", "");
                                             }}
                                             value={field.value}
                                         >
@@ -301,7 +324,7 @@ const AddTransactionForm = () => {
                                             </FormControl>
                                             <SelectContent>
                                                 {/* TODO: type and autocomplete fuzzy */}
-                                                {(categories as Record<string, string[]>)[form.getValues().category as string]?.map((key, index) => (
+                                                {(activeCategories as Record<string, string[]>)[form.getValues().category as string]?.map((key, index) => (
                                                     <SelectItem key={index} value={key}>
                                                         {key}
                                                     </SelectItem>
@@ -376,8 +399,8 @@ const AddTransactionForm = () => {
                                             form.resetField("payment_account");
                                         }}
                                         value={field.value}
-                                        onOpenChange={() => {
-                                            loadPaymentMethods();
+                                        onOpenChange={(isOpening) => {
+                                            if (isOpening) loadPaymentMethods();
                                         }}
                                     >
                                         <FormControl>

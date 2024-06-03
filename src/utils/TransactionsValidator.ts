@@ -4,45 +4,42 @@ export const date_regex = /^\d\d\d\d-\d\d-\d\d$/;
 // export const amount_regex = /^-?\$?\d{1,3}([, ]\d{3})*\.\d\d?$/;
 export const amount_regex = /^[-+]?\d+\.\d\d?$/;
 
-// TODO: merge zod objects
-export const TransactionFormSchema = z.object({
-    transaction_type: z.string(), // expense or income
-    date: z.coerce.date({ required_error: "Transaction date is required" }),
-    merchant_company: z.string(),
-    // merchant_bank_description: z.string().optional(),
+const BaseTransaction = z.object({
+    date: z.coerce.date(),
+    merchant_company: z.string().trim().min(1),
     location: z.string().optional(),
-    amount: z.coerce.number(), // z.string().regex(amount_regex),
-    description: z.string(),
-    unit_count: z.coerce.number().optional(), // z.string().regex(amount_regex),
-    unit_type: z.string().optional(),
-    category: z.string(),
+    amount: z.coerce.number(),
+    description: z.string().optional(),
+    category: z.string().trim().min(1, { message: "Required" }),
     subcategory: z.string().optional(),
-    transaction_method: z.string(),
+    transaction_method: z.string().trim().min(1, { message: "Required" }),
     payment_account: z.string().optional(),
-    reimbursed: z.boolean().default(false),
+});
+
+export const ExpenseSchema = BaseTransaction.extend({
+    reimbursed: z.boolean().optional(), // TODO: remove
+    reimbursed_amount: z.coerce.number().optional(),
+    unit_count: z.coerce.number().optional(),
+    unit_type: z.string().optional(),
+    unit_price: z.coerce.number().optional(),
+});
+export type ExpenseTransaction = z.infer<typeof ExpenseSchema>;
+
+export const IncomeSchema = BaseTransaction.extend({
+    pay_period_start: z.coerce.date().optional(),
+    pay_period_end: z.coerce.date().optional(),
+});
+export type IncomneTransaction = z.infer<typeof IncomeSchema>;
+
+export const TransactionFormSchema = ExpenseSchema.merge(IncomeSchema).extend({
+    transaction_type: z.string(), // expense or income
 });
 export type TransactionForm = z.infer<typeof TransactionFormSchema>;
 
-// DATE,	MERCHANT/COMPANY,	AMOUNT,	DESCRIPTION,	CATEGORY,	SUBCATEGORY,	PAYMENT ACCOUNT,	TRANSACTION METHOD,	REIMBURSED
-export const TransactionSchema = z.object({
-    date: z.coerce.date(),
-    merchant_company: z.string(),
-    // merchant_bank_description: z.string().optional(),
-    location: z.string().optional(),
-    amount: z.coerce.number(),
-    description: z.string(),
-    unit_count: z.coerce.number().optional(), // z.string().regex(amount_regex),
-    unit_type: z.string().optional(),
-    unit_price: z.coerce.number().optional(),
-    category: z.string(),
-    subcategory: z.string().optional(),
-    transaction_method: z.string(),
-    payment_account: z.string().optional(),
-    reimbursed: z.boolean(),
-});
-export type Transaction = z.infer<typeof TransactionSchema>;
-
 export function validateTransactions(transactions: unknown) {
-    // console.log(transactions);
-    return z.array(TransactionSchema).parse(transactions);
+    return z.array(ExpenseSchema).parse(transactions);
+}
+
+export function validateIncomeTransactions(transactions: unknown) {
+    return z.array(IncomeSchema).parse(transactions);
 }
