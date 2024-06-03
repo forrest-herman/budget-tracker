@@ -1,8 +1,7 @@
 import { OAuth2Client } from "google-auth-library";
 import { google, sheets_v4 } from "googleapis";
 import { extractDataFromQueryResponse, initGoogleAuth, initSheetsClient } from "./googleUtils";
-import { ExpenseTransaction, IncomneTransaction } from "./TransactionsValidator";
-import { format } from "date-fns";
+import { ExpenseTransaction } from "./TransactionsValidator";
 
 // TODO: use named ranges for sheets https://developers.google.com/sheets/api/guides/concepts#cell
 const expenseSheet = "Expenses";
