@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { formatRelativeDate, convertLocalDateToUTCIgnoringTimezone } from "@/utils/dateUtils";
+import { formatRelativeDate, convertLocalDateToUTCIgnoringTimezone, convertUTCToLocalDateIgnoringTimezone } from "@/utils/dateUtils";
 
 import { cn } from "@/utils/shadcn";
 import { Button } from "@/components/ui/button";
@@ -18,17 +18,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { TransactionFormSchema } from "@/utils/TransactionsValidator";
 import type { TransactionForm } from "@/utils/TransactionsValidator";
 import { useEffect, useState } from "react";
+import { format, differenceInDays, add } from "date-fns";
 
 const AddTransactionForm = () => {
     const [calendarOpen, setCalendarOpen] = useState(false);
+    const [rangeCalendarOpen, setRangeCalendarOpen] = useState(false);
     const [activeCategories, setActiveCategories] = useState({});
     const [allCategories, setAllCategories] = useState<{ [key: string]: Object }>({ expense: {}, income: {} });
     const [paymentMethods, setPaymentMethods] = useState({});
+    const [lastPayPeriod, setLastPayPeriod] = useState<{ [key: string]: Date }>({});
 
     // load sheet data on page render
     useEffect(() => {
+        // TODO: make these functions async and in parallel
         loadCategories();
         loadPaymentMethods();
+        loadLastPayPeriod();
     }, []);
 
     const form = useForm<TransactionForm>({
@@ -66,7 +71,10 @@ const AddTransactionForm = () => {
             ...values,
             date: convertLocalDateToUTCIgnoringTimezone(values.date),
             unit_price: values.unit_count ? values.amount / values.unit_count : undefined,
+            pay_period_start: values.pay_period_range?.from ? convertLocalDateToUTCIgnoringTimezone(values.pay_period_range.from) : undefined,
+            pay_period_end: values.pay_period_range?.to ? convertLocalDateToUTCIgnoringTimezone(values.pay_period_range.to) : undefined,
         };
+        console.log("form values: ", transactionValues);
 
         let url: string;
         if (values.transaction_type === "income") {
@@ -92,7 +100,6 @@ const AddTransactionForm = () => {
     }
 
     function loadCategories() {
-        // TODO: run on page load
         fetch("/api/categories", {
             method: "get",
             headers: {
@@ -113,7 +120,6 @@ const AddTransactionForm = () => {
     }
 
     function loadPaymentMethods() {
-        // TODO: run on page load
         fetch("/api/payment-methods", {
             method: "get",
             headers: {
@@ -129,6 +135,42 @@ const AddTransactionForm = () => {
             .catch((resp) => {
                 // console.log(resp)
             });
+    }
+
+    function loadLastPayPeriod() {
+        // find last income transaction with a pay period
+        const payload: { [key: string]: any } = {
+            where: { pay_period_start: "IS NOT NULL" },
+            limit: 1,
+        };
+
+        fetch("/api/income/query", {
+            method: "post",
+            headers: {
+                "content-type": "application/json",
+                accept: "application/json",
+            },
+            body: JSON.stringify(payload),
+        })
+            .then(async (resp) => {
+                const body = await resp.json();
+                if (body.length === 0) return;
+
+                const lastPeriodStart: Date = convertUTCToLocalDateIgnoringTimezone(new Date(body[0].pay_period_start));
+                const lastPeriodEnd: Date = convertUTCToLocalDateIgnoringTimezone(new Date(body[0].pay_period_end));
+                setLastPayPeriod({ start: lastPeriodStart, end: lastPeriodEnd });
+            })
+            .catch((resp) => {
+                console.log(resp);
+            });
+    }
+
+    function insertNewPayPeriod() {
+        if (Object.keys(lastPayPeriod).length === 0) return;
+        // take the last pay period and estimate the new one
+        const periodLength = differenceInDays(lastPayPeriod.end.getTime(), lastPayPeriod.start.getTime());
+        const newPeriodStart = add(lastPayPeriod.end, { days: 1 });
+        form.setValue("pay_period_range", { from: newPeriodStart, to: add(newPeriodStart, { days: periodLength }) });
     }
 
     return (
@@ -190,7 +232,7 @@ const AddTransactionForm = () => {
                                                 field.onChange(event);
                                                 setCalendarOpen(false);
                                             }}
-                                            disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                                            disabled={(date) => date > new Date()}
                                             initialFocus
                                         />
                                     </PopoverContent>
@@ -314,6 +356,7 @@ const AddTransactionForm = () => {
                                                 field.onChange(value);
                                                 if (value === "Gas") form.setValue("unit_type", "litres");
                                                 else form.setValue("unit_type", "");
+                                                if (value === "Salary") insertNewPayPeriod();
                                             }}
                                             value={field.value}
                                         >
@@ -380,6 +423,52 @@ const AddTransactionForm = () => {
                                                 <SelectItem value='litres'>L</SelectItem>
                                             </SelectContent>
                                         </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                    )}
+                    {(form.getValues().category as string) === "Employment" && (
+                        <div className='flex'>
+                            <FormField
+                                control={form.control}
+                                name='pay_period_range'
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Pay Period</FormLabel>
+                                        <Popover open={rangeCalendarOpen} onOpenChange={setRangeCalendarOpen}>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                    <Button variant={"outline"} className={cn("w-[240px] pl-3 text-left font-normal flex", !field.value && "text-muted-foreground")}>
+                                                        {field.value?.from ? (
+                                                            field.value?.to ? (
+                                                                <>
+                                                                    {format(field.value.from, "LLL d, y")} - {format(field.value.to, "LLL d, y")}
+                                                                </>
+                                                            ) : (
+                                                                format(field.value.from, "LLL d, y")
+                                                            )
+                                                        ) : (
+                                                            <span>Pick a date</span>
+                                                        )}
+                                                        <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
+                                                    </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className='w-auto p-0' align='start'>
+                                                <Calendar
+                                                    mode='range'
+                                                    selected={field.value}
+                                                    onSelect={(event) => {
+                                                        field.onChange(event);
+                                                        // if (field.value?.from && field.value?.to) setRangeCalendarOpen(false);
+                                                    }}
+                                                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                                                    initialFocus
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
                                         <FormMessage />
                                     </FormItem>
                                 )}

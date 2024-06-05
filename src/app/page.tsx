@@ -19,7 +19,7 @@ const DashboardPage = async () => {
     let spending_by_category = {};
     let error = true;
     try {
-        recent_transactions = await sheets.getTransactions({ limit: 5 }); // TODO: fix this, it doesn't sort properly
+        recent_transactions = await sheets.getTransactions({ sheet: "Expenses", limit: 5 }); // TODO: fix this, it doesn't sort properly
         if (recent_transactions.length > 0) {
             // these queries only work if the user has already added some data to the spreadsheet
             spending_by_category = await sheets.getCategorySpending({ startDate: start_date, endDate: end_date });

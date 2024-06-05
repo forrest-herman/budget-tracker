@@ -26,13 +26,22 @@ export const ExpenseSchema = BaseTransaction.extend({
 export type ExpenseTransaction = z.infer<typeof ExpenseSchema>;
 
 export const IncomeSchema = BaseTransaction.extend({
-    pay_period_start: z.coerce.date().optional(),
-    pay_period_end: z.coerce.date().optional(),
+    pay_period_start: z.coerce.date().optional().nullable(),
+    pay_period_end: z.coerce.date().optional().nullable(),
 });
-export type IncomneTransaction = z.infer<typeof IncomeSchema>;
+export type IncomeTransaction = z.infer<typeof IncomeSchema>;
+
+const MasterTransactionSchema = ExpenseSchema.merge(IncomeSchema);
+export type MasterTransaction = z.infer<typeof MasterTransactionSchema>;
 
 export const TransactionFormSchema = ExpenseSchema.merge(IncomeSchema).extend({
     transaction_type: z.string(), // expense or income
+    pay_period_range: z
+        .object({
+            from: z.date(),
+            to: z.date(),
+        })
+        .optional(),
 });
 export type TransactionForm = z.infer<typeof TransactionFormSchema>;
 

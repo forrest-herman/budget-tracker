@@ -1,7 +1,8 @@
 import { OAuth2Client } from "google-auth-library";
 import { google, sheets_v4 } from "googleapis";
 import { extractDataFromQueryResponse, initGoogleAuth, initSheetsClient } from "./googleUtils";
-import { ExpenseTransaction } from "./TransactionsValidator";
+import { ExpenseTransaction, IncomeTransaction, MasterTransaction } from "./TransactionsValidator";
+import { dateFromSheetsCell } from "./dateUtils";
 
 // TODO: use named ranges for sheets https://developers.google.com/sheets/api/guides/concepts#cell
 const expenseSheet = "Expenses";
@@ -12,6 +13,28 @@ export default class SheetsClient {
     private sheets: sheets_v4.Sheets;
     private spreadsheet_id: string;
 
+    // for now keep this up to date manually
+    columnIds: { [key: string]: string } = {
+        // shared
+        date: "B",
+        merchant_company: "C",
+        location: "D",
+        amount: "E",
+        description: "F",
+        category: "G",
+        subcategory: "H",
+        payment_account: "I",
+        transaction_method: "J",
+        // expense specific
+        reimbursed_amount: "K",
+        unit_count: "L",
+        unit_type: "M",
+        unit_price: "N",
+        // income specific
+        pay_period_start: "K",
+        pay_period_end: "L",
+    };
+
     user: { [key: string]: string | undefined };
 
     constructor(access_token: string, spreadsheet_id: string, user: { [key: string]: string | undefined }) {
@@ -19,11 +42,10 @@ export default class SheetsClient {
         this.sheets = initSheetsClient(this.auth);
         this.spreadsheet_id = spreadsheet_id;
         this.user = user;
+        // TODO: pull columnIds automatically in order for each sheet by column name
     }
 
-    //add data filtering get methods
-    //what other operations should it support?
-
+    // deprecated
     async getAllTransactions() {
         console.log("get all transactions");
 
@@ -63,7 +85,7 @@ export default class SheetsClient {
     /* 
     compares given transactions with the ones already in the sheet to ensure they are inserted in order
     */
-    async compareTransactions(transactions: ExpenseTransaction[], type: "expense" | "income" = "expense"): Promise<ExpenseTransaction[]> {
+    async compareTransactions(transactions: ExpenseTransaction[] | IncomeTransaction[], type: "expense" | "income" = "expense"): Promise<ExpenseTransaction[] | IncomeTransaction[]> {
         // TODO: double check this function
         // TODO: add income ability too
         console.log("comparing:", transactions);
@@ -134,55 +156,61 @@ export default class SheetsClient {
                     transaction.subcategory || "",
                     transaction.payment_account || "",
                     transaction.transaction_method || "",
-                    isExpense ? transaction.reimbursed_amount : transaction.pay_period_start,
-                    isExpense ? transaction.unit_count : transaction.pay_period_start,
+                    isExpense ? transaction.reimbursed_amount : transaction.pay_period_start.toLocaleDateString(),
+                    isExpense ? transaction.unit_count : transaction.pay_period_end.toLocaleDateString(),
                     isExpense ? transaction.unit_type : "",
                     isExpense ? transaction.unit_price : "",
                 ]),
             },
         });
+        if (res.status !== 200) {
+            console.error("Error appending transactions");
+            throw "Error appending transactions";
+        } else {
+            console.log("Transactions appended");
+        }
     }
 
     // TODO: edit/remove transaction
 
-    async getTransactions(options?: { start_date?: Date; end_date?: Date; limit?: number }): Promise<ExpenseTransaction[]> {
+    // TODO: add data filtering get methods
+    async getTransactions(options?: { sheet?: string; start_date?: Date; end_date?: Date; limit?: number; where?: { [key: string]: string } }): Promise<MasterTransaction[]> {
         console.log("fetching Transactions");
 
         let query = "select *";
 
-        query += " WHERE B IS NOT NULL";
+        query += ` WHERE ${this.columnIds.date} IS NOT NULL`;
 
         if (options?.start_date && options?.end_date) {
             // Both dates are provided
-            query += ` AND date '${options.start_date.toISOString().substring(0, 10)}' <= B and B <= date '${options.end_date.toISOString().substring(0, 10)}'`;
+            query += ` AND date '${options.start_date.toISOString().substring(0, 10)}' <= ${this.columnIds.date} and ${this.columnIds.date} <= date '${options.end_date
+                .toISOString()
+                .substring(0, 10)}'`;
         } else if (options?.start_date) {
             // Only start date is provided
-            query += ` AND date '${options.start_date.toISOString().substring(0, 10)}' <= B`;
+            query += ` AND date '${options.start_date.toISOString().substring(0, 10)}' <= ${this.columnIds.date}`;
         } else if (options?.end_date) {
             // Only end date is provided
-            query += ` AND B <= date '${options.end_date.toISOString().substring(0, 10)}'`;
+            query += ` AND ${this.columnIds.date} <= date '${options.end_date.toISOString().substring(0, 10)}'`;
+        } else if (options?.where) {
+            query += ` AND ${buildSqlWhere(options.where, this.columnIds)}`;
         }
 
-        query += " ORDER BY B desc";
+        // TODO: could add options optional param for `order by` if needed
+        query += ` ORDER BY ${this.columnIds.date} desc`;
 
         if (options?.limit) {
             query += ` limit ${options.limit}`;
         }
 
-        const res = await this.query(query);
+        console.log("query", query);
+
+        const res = await this.query(query, options?.sheet);
 
         //convert dates to date objects
         const transactions = res.map((entry: any) => {
-            // Sheets date usually has the form `Date(year,month,date)` (if the user didn't change anything)
-            let [year, monthIndex, day] = entry["DATE"].substring(5, entry["DATE"].length - 1).split(",");
-            monthIndex = parseInt(monthIndex);
-            const month = monthIndex + 1;
-            // let date = new Date(year, monthIndex, day); // uses local server timezone
-            let dateFromUTC = new Date(Date.UTC(year, monthIndex, day)); // uses UTC timezone
-            // console.log(entry["DATE"], "toString", dateFromUTC.toString(), "ISO", dateFromUTC.toISOString(), "UTC", dateFromUTC.toUTCString());
-
             return {
-                date: dateFromUTC,
+                date: dateFromSheetsCell(entry["DATE"]) as Date,
                 merchant_company: entry["MERCHANT/COMPANY"],
                 location: entry["LOCATION"],
                 amount: entry["AMOUNT"] || 0,
@@ -191,6 +219,12 @@ export default class SheetsClient {
                 payment_account: entry["PAYMENT ACCOUNT"],
                 transaction_method: entry["TRANSACTION METHOD"],
                 reimbursed: entry["REIMBURSED"],
+                reimbursed_amount: entry["REIMBURSED"],
+                unit_count: entry["UNIT COUNT"],
+                unit_type: entry["UNIT TYPE"],
+                unit_price: entry["PRICE/UNIT"],
+                pay_period_start: dateFromSheetsCell(entry["PAY PERIOD START"]),
+                pay_period_end: dateFromSheetsCell(entry["PAY PERIOD END"]),
             };
         });
         return transactions;
@@ -231,44 +265,20 @@ export default class SheetsClient {
         return categories;
     }
 
-    async getIncomeCategories() {
-        console.log("get income categories");
-
-        const res = await this.sheets.spreadsheets.values.get({
-            spreadsheetId: this.spreadsheet_id,
-            range: "CONFIG: Income Categories",
-        });
-
-        if (!res.data.values) return [];
-
-        var categories: Record<string, string[]> = {};
-        res.data.values.forEach((row: any, index: number, array: any[][]) => {
-            if (index === 0) return; // don't include headers
-
-            let headers = array[0];
-            headers.forEach((value: string, i: number) => {
-                if (!categories.hasOwnProperty(value)) {
-                    categories[value] = [];
-                }
-                if (row[i]) categories[value].push(row[i]);
-            });
-        });
-
-        return categories;
-    }
-
     async getTotalSpending(options?: { startDate?: Date; endDate?: Date }): Promise<number> {
-        let query = "select sum(E)";
+        let query = `select sum(${this.columnIds.amount})`;
 
         if (options?.startDate && options?.endDate) {
             // Both dates are provided
-            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= B and B <= date '${options.endDate.toISOString().substring(0, 10)}'`;
+            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= ${this.columnIds.date} and ${this.columnIds.date} <= date '${options.endDate
+                .toISOString()
+                .substring(0, 10)}'`;
         } else if (options?.startDate) {
             // Only start date is provided
-            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= B`;
+            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= ${this.columnIds.date}`;
         } else if (options?.endDate) {
             // Only end date is provided
-            query += ` where B <= date '${options.endDate.toISOString().substring(0, 10)}'`;
+            query += ` where ${this.columnIds.date} <= date '${options.endDate.toISOString().substring(0, 10)}'`;
         }
 
         const res = await this.query(query);
@@ -280,20 +290,22 @@ export default class SheetsClient {
     }
 
     async getCategorySpending(options?: { startDate?: Date; endDate?: Date }): Promise<{ [category: string]: number }> {
-        let query = "select G, sum(E)";
+        let query = `select ${this.columnIds.category}, sum(${this.columnIds.amount})`;
         if (options?.startDate && options?.endDate) {
             // Both dates are provided
-            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= B and B <= date '${options.endDate.toISOString().substring(0, 10)}'`;
+            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= ${this.columnIds.date} and ${this.columnIds.date} <= date '${options.endDate
+                .toISOString()
+                .substring(0, 10)}'`;
         } else if (options?.startDate) {
             // Only start date is provided
-            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= B`;
+            query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= ${this.columnIds.date}`;
         } else if (options?.endDate) {
             // Only end date is provided
-            query += ` where B <= date '${options.endDate.toISOString().substring(0, 10)}'`;
+            query += ` where ${this.columnIds.date} <= date '${options.endDate.toISOString().substring(0, 10)}'`;
         }
-        query += "group by G";
+        query += ` group by ${this.columnIds.category}`;
 
-        const res = await this.query(query);
+        const res = await this.query(query, "Expenses");
         const spendingByCategory: { [category: string]: number } = {};
         res.forEach((entry: any) => {
             const category = entry["CATEGORY"] || "Uncategorized";
@@ -335,12 +347,12 @@ export default class SheetsClient {
     }
 
     // general query
-
-    async query(query: string): Promise<any[]> {
+    async query(query: string, sheet: string = ""): Promise<any[]> {
         const url =
             "https://docs.google.com/spreadsheets" +
             `/d/${this.spreadsheet_id}/gviz/tq` +
             `?tq=${encodeURIComponent(query)}` +
+            `&sheet=${sheet}` +
             `&access_token=${encodeURIComponent((await this.auth.getAccessToken()).token as string)}`;
 
         const resp = await fetch(url);
@@ -378,4 +390,16 @@ export default class SheetsClient {
 
         return rows;
     }
+}
+
+function buildSqlWhere(where: { [key: string]: string }, columnIds: { [key: string]: string }) {
+    let where_query: string = "";
+    for (const key in where) {
+        if (where_query) {
+            where_query += ` AND ${key} = ${where[key]}`;
+        } else {
+            where_query = `${columnIds[key]} ${where[key]}`;
+        }
+    }
+    return where_query;
 }
