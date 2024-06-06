@@ -50,3 +50,10 @@ export function convertUTCToLocalDateIgnoringTimezone(utcDate: Date) {
         //   utcDate.getUTCMilliseconds(),
     );
 }
+
+export function dateFromSheetsCell(cell: string): Date | null {
+    if (!cell) return null;
+    // Sheets date usually has the form `Date(year,month,date)` (if the user didn't change anything)
+    let [year, monthIndex, day] = cell.substring(5, cell.length - 1).split(",");
+    return new Date(Date.UTC(parseInt(year), parseInt(monthIndex), parseInt(day))); // uses UTC timezone
+}
