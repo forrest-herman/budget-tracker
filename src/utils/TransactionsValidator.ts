@@ -18,10 +18,10 @@ const BaseTransaction = z.object({
 
 export const ExpenseSchema = BaseTransaction.extend({
     reimbursed: z.boolean().optional(), // TODO: remove
-    reimbursed_amount: z.coerce.number().optional(),
-    unit_count: z.coerce.number().optional(),
+    reimbursed_amount: z.coerce.number().optional().nullable(),
+    unit_count: z.coerce.number().optional().nullable(),
     unit_type: z.string().optional(),
-    unit_price: z.coerce.number().optional(),
+    unit_price: z.coerce.number().optional().nullable(),
 });
 export type ExpenseTransaction = z.infer<typeof ExpenseSchema>;
 
