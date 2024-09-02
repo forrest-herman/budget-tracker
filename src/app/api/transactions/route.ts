@@ -6,8 +6,9 @@ export async function POST(req: Request) {
     const sheets_client = await useSheetsClient();
     try {
         console.log("transactions:", transactions);
-        const new_transactions = await sheets_client.compareTransactions(transactions);
+        const new_transactions = await sheets_client.compareTransactions(transactions); // TODO this is unecessary for single transactions
         await sheets_client.appendTransactions(new_transactions);
+        await sheets_client.sortSheet("Expenses", { sortColumnLabel: "date" });
         return Response.json("done");
     } catch (err) {
         console.log(err);

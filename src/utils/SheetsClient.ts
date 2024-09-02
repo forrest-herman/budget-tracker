@@ -86,7 +86,6 @@ export default class SheetsClient {
     compares given transactions with the ones already in the sheet to ensure they are inserted in order
     */
     async compareTransactions(transactions: ExpenseTransaction[] | IncomeTransaction[], type: "expense" | "income" = "expense"): Promise<ExpenseTransaction[] | IncomeTransaction[]> {
-        // TODO: double check this function
         // TODO: add income ability too
         console.log("comparing:", transactions);
         // sort the transactions by date
@@ -372,8 +371,6 @@ export default class SheetsClient {
         const tableData = jsonData.table;
         const columns = tableData.cols.map((col: any) => col.label);
 
-        // console.log(tableData);
-
         //if the column labels are empty, then there is only a single row of column titles in the sheet
         if (columns.every((label: string) => label === "")) {
             console.log("Data incorectly formatted");
@@ -389,6 +386,47 @@ export default class SheetsClient {
         });
 
         return rows;
+    }
+
+    async sortSheet(sheetTitle: string, options?: { sortColumnLabel?: string; sortColumnIndex?: number; direction?: "ASCENDING" | "DESCENDING" }) {
+        const spreadsheetProperties = await this.sheets.spreadsheets.get({
+            spreadsheetId: this.spreadsheet_id,
+        });
+
+        const sheetProperties = spreadsheetProperties?.data?.sheets?.filter((sheet) => sheet?.properties?.title === sheetTitle)?.at(0)?.properties;
+
+        let dimensionIndex = options?.sortColumnIndex || 0;
+        // use sortColumnLabel to find the index
+        if (options?.sortColumnLabel) {
+            const columnLetter = this.columnIds[options?.sortColumnLabel].toLowerCase();
+            dimensionIndex = columnLetter.charCodeAt(0) - 97;
+        }
+
+        await this.sheets.spreadsheets.batchUpdate({
+            spreadsheetId: this.spreadsheet_id,
+            requestBody: {
+                requests: [
+                    {
+                        sortRange: {
+                            range: {
+                                sheetId: sheetProperties?.sheetId || 0,
+                                startRowIndex: 1, // ignore headers
+                                endRowIndex: sheetProperties?.gridProperties?.rowCount || 1,
+                                startColumnIndex: 0,
+                                endColumnIndex: sheetProperties?.gridProperties?.columnCount || 1,
+                            },
+                            sortSpecs: [
+                                {
+                                    dimensionIndex: dimensionIndex,
+                                    sortOrder: options?.direction || "ASCENDING",
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+        });
+        console.log("Sheet sorted successfully.");
     }
 }
 

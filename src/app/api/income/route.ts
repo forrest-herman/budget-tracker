@@ -7,7 +7,8 @@ export async function POST(req: Request) {
     const sheets_client = await useSheetsClient();
     try {
         // const new_transactions = await sheets_client.compareTransactions(transactions);
-        await sheets_client.appendTransactions(transactions, false); // TODO: fix ordering by overwriting
+        await sheets_client.appendTransactions(transactions, false);
+        await sheets_client.sortSheet("Income", { sortColumnLabel: "date" });
         return Response.json("done");
     } catch (err) {
         console.log(err);
