@@ -19,6 +19,7 @@ import { TransactionFormSchema } from "@/utils/TransactionsValidator";
 import type { TransactionForm } from "@/utils/TransactionsValidator";
 import { useEffect, useState } from "react";
 import { format, differenceInDays, add } from "date-fns";
+import CurrencyInput from "react-currency-input-field";
 
 const AddTransactionForm = () => {
     const [calendarOpen, setCalendarOpen] = useState(false);
@@ -277,18 +278,23 @@ const AddTransactionForm = () => {
                             <FormItem>
                                 <FormLabel>Amount</FormLabel>
                                 <FormControl>
-                                    <Input
-                                        // inputMode='numeric'
-                                        // pattern='[0-9]*'
-                                        type='text'
-                                        placeholder='0.00'
-                                        {...field}
+                                    <CurrencyInput
+                                        prefix={"$"}
+                                        placeholder='$'
+                                        onValueChange={(v) => {
+                                            console.log("v", v);
+                                            field.onChange(v);
+                                        }}
                                         // onChange={(e) => {
                                         //     field.onChange(e);
                                         //     console.log("format:", e.target.value);
                                         // }}
+                                        decimalsLimit={2}
+                                        allowNegativeValue={false}
+                                        className={cn(
+                                            "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                        )}
                                     />
-                                    {/* TODO: add better auto-formatting to the $ amount. Maybe use this? https://gist.github.com/Sutil/5285f2e5a912dcf14fc23393dac97fed */}
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
