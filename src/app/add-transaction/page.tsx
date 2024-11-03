@@ -2,11 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { formatRelativeDate, convertLocalDateToUTCIgnoringTimezone, convertUTCToLocalDateIgnoringTimezone } from "@/utils/dateUtils";
+import { formatRelativeDate, convertDateForServer, convertDateForClient } from "@/utils/dateUtils";
 
 import { cn } from "@/utils/shadcn";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CalendarIcon } from "lucide-react";
@@ -44,7 +44,7 @@ const AddTransactionForm = () => {
             date: new Date(new Date().setHours(0, 0, 0, 0)), // midnight today
             merchant_company: "",
             location: "",
-            amount: "" as unknown as number, // necessary for form reset to work
+            amount: 0, // necessary for form reset to work
             description: "",
             unit_count: "" as unknown as number, // necessary for form reset to work
             unit_type: "",
@@ -55,6 +55,17 @@ const AddTransactionForm = () => {
             reimbursed_amount: "" as unknown as number, // necessary for form reset to work
         },
     });
+
+    function resetForm() {
+        const date = form.getValues("date")
+        const transaction_type = form.getValues("transaction_type")
+        const transaction_method = form.getValues('transaction_method')
+        form.reset();
+        form.setValue('date', date)
+        form.setValue('transaction_type', transaction_type)
+        form.setValue('transaction_method', transaction_method)
+        loadLastPayPeriod();
+    }
 
     function onSubmit(values: TransactionForm) {
         console.log("form submitted with ", values);
@@ -70,10 +81,10 @@ const AddTransactionForm = () => {
         // format the date to UTC for server processing and add unit price column
         const transactionValues = {
             ...values,
-            date: convertLocalDateToUTCIgnoringTimezone(values.date),
+            date: convertDateForServer(values.date),
             unit_price: values.unit_count ? values.amount / values.unit_count : undefined,
-            pay_period_start: values.pay_period_range?.from ? convertLocalDateToUTCIgnoringTimezone(values.pay_period_range.from) : undefined,
-            pay_period_end: values.pay_period_range?.to ? convertLocalDateToUTCIgnoringTimezone(values.pay_period_range.to) : undefined,
+            pay_period_start: values.pay_period_range?.from ? convertDateForServer(values.pay_period_range.from) : undefined,
+            pay_period_end: values.pay_period_range?.to ? convertDateForServer(values.pay_period_range.to) : undefined,
         };
         console.log("form values: ", transactionValues);
 
@@ -92,14 +103,15 @@ const AddTransactionForm = () => {
         })
             .then((resp) => {
                 //TODO: handle response
-                form.reset();
-                // TODO: redirect to dashboard home
+                resetForm()
+                // TODO: redirect to dashboard home?
             })
             .catch((resp) => {
                 //TODO: handle error
             });
     }
 
+    // TODO: make this a util available elsewhere?
     function loadCategories() {
         fetch("/api/categories", {
             method: "get",
@@ -134,7 +146,7 @@ const AddTransactionForm = () => {
                 setPaymentMethods(body);
             })
             .catch((resp) => {
-                // console.log(resp)
+                console.log(resp)
             });
     }
 
@@ -157,8 +169,8 @@ const AddTransactionForm = () => {
                 const body = await resp.json();
                 if (body.length === 0) return;
 
-                const lastPeriodStart: Date = convertUTCToLocalDateIgnoringTimezone(new Date(body[0].pay_period_start));
-                const lastPeriodEnd: Date = convertUTCToLocalDateIgnoringTimezone(new Date(body[0].pay_period_end));
+                const lastPeriodStart: Date = convertDateForClient(new Date(body[0].pay_period_start));
+                const lastPeriodEnd: Date = convertDateForClient(new Date(body[0].pay_period_end));
                 setLastPayPeriod({ start: lastPeriodStart, end: lastPeriodEnd });
             })
             .catch((resp) => {
@@ -235,6 +247,7 @@ const AddTransactionForm = () => {
                                             }}
                                             disabled={(date) => date > new Date()}
                                             initialFocus
+                                            defaultMonth={field.value}
                                         />
                                     </PopoverContent>
                                 </Popover>
@@ -282,18 +295,14 @@ const AddTransactionForm = () => {
                                         prefix={"$"}
                                         placeholder='$'
                                         onValueChange={(v) => {
-                                            console.log("v", v);
                                             field.onChange(v);
                                         }}
-                                        // onChange={(e) => {
-                                        //     field.onChange(e);
-                                        //     console.log("format:", e.target.value);
-                                        // }}
                                         decimalsLimit={2}
                                         allowNegativeValue={false}
                                         className={cn(
                                             "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                         )}
+                                        value={field.value}
                                     />
                                 </FormControl>
                                 <FormMessage />
@@ -470,7 +479,7 @@ const AddTransactionForm = () => {
                                                         field.onChange(event);
                                                         // if (field.value?.from && field.value?.to) setRangeCalendarOpen(false);
                                                     }}
-                                                    disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                                                    disabled={(date) => date > new Date()}
                                                     initialFocus
                                                 />
                                             </PopoverContent>
