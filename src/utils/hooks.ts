@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 export async function useSheetsClient() {
   const session = (await getServerSession(options)) as Session;
   console.log('sheets session', session);
+  // @ts-ignore
   if (session?.error) {
     console.log('error, going to signin');
     return redirect('/api/auth/signin'); // TODO: make this a variable
