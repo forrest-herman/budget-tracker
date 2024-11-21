@@ -62,7 +62,7 @@ export const options: NextAuthOptions = {
       console.log('token', token);
 
       // Return the previous token if it's still valid
-      if ((Date.now() < token.accessTokenExpires) as number) {
+      if (Date.now() < (token.accessTokenExpires as number)) {
         return token;
       }
 
