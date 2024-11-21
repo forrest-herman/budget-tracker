@@ -3,6 +3,7 @@ import { initGoogleAuth, findOrCreateSpreadsheet } from '@/utils/googleUtils';
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 
+
 const { GOOGLE_ID, GOOGLE_SECRET, JWT_SECRET } = process.env;
 
 const scopes = [
@@ -21,10 +22,9 @@ export const options: NextAuthOptions = {
       authorization: {
         params: {
           scope: scopes.join(' '),
-          prompt: 'select_account', // 'none', // TODO: how to work with none
+          prompt: 'consent', // TODO: how to work with none or select_account
           access_type: 'offline',
           include_granted_scopes: true,
-          expiry_date: Date.now() + 12096e5,
         },
       },
       httpOptions: {
@@ -37,11 +37,15 @@ export const options: NextAuthOptions = {
     // Seconds - How long until an idle session expires and is no longer valid.
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  // TODO: how can I make this work?
   // jwt: {
   //   secret: JWT_SECRET, // Ensure this is set in your environment variables
   // },
   callbacks: {
     async jwt({ token, account, profile }) {
+      console.log('account', account);
+      console.log('profile', profile);
+
       if (account && profile) {
         // Initial sign-in if account exists
         // Save the access token and refresh token in the JWT on the initial login, as well as the user details
@@ -52,11 +56,13 @@ export const options: NextAuthOptions = {
         };
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token; // Save the refresh token
-        token.accessTokenExpires = account.expires_at; // Expiry time in epoch ms
+        token.accessTokenExpires = account.expires_at * 1000; // Expiry time in epoch msec
       }
 
+      console.log('token', token);
+
       // Return the previous token if it's still valid
-      if (Date.now() < (token.accessTokenExpires as number) * 1000) {
+      if ((Date.now() < token.accessTokenExpires) as number) {
         return token;
       }
 
