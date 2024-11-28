@@ -77,6 +77,7 @@ export const options: NextAuthOptions = {
       session.user.image = token.user.picture ?? token.user.image;
       session.accessToken = token.accessToken;
       session.accessTokenExpires = token.accessTokenExpires;
+      session.error = token.error || null; // Pass the error to the session
       return session;
     },
     // unnecessary
@@ -143,8 +144,6 @@ async function refreshAccessToken(token: any) {
     };
   } catch (error) {
     console.error('Error refreshing access token', error);
-    redirect('/api/auth/signin'); // TODO: testing this
-
     return {
       ...token,
       error: 'RefreshAccessTokenError',
