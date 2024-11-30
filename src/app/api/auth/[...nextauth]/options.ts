@@ -22,7 +22,7 @@ export const options: NextAuthOptions = {
       authorization: {
         params: {
           scope: scopes.join(' '),
-          prompt: 'consent', // TODO: how to work with none or select_account
+          prompt: 'select_account', // TODO: how to work with none
           access_type: 'offline',
           include_granted_scopes: true,
         },
