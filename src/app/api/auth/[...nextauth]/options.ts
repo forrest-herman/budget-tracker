@@ -1,17 +1,20 @@
-import { findSpreadsheet, initGoogleAuth, initSheetsClient, initDriveClient, findOrCreateSpreadsheet } from "@/utils/googleUtils";
-import { NextAuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
+// @ts-nocheck
+import { initGoogleAuth, findOrCreateSpreadsheet } from '@/utils/googleUtils';
+import { NextAuthOptions } from 'next-auth';
+import GoogleProvider from 'next-auth/providers/google';
 
 
-const { GOOGLE_ID, GOOGLE_SECRET } = process.env;
+const { GOOGLE_ID, GOOGLE_SECRET, JWT_SECRET } = process.env;
 
-const scopes = ["email", "openid", "profile", "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.file"];
+const scopes = [
+  'email',
+  'openid',
+  'profile',
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/drive.file',
+];
 
 export const options: NextAuthOptions = {
-  session: {
-    // Seconds - How long until an idle session expires and is no longer valid.
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
   providers: [
     GoogleProvider({
       clientId: GOOGLE_ID as string,
@@ -19,9 +22,9 @@ export const options: NextAuthOptions = {
       authorization: {
         params: {
           scope: scopes.join(' '),
-          prompt: 'select_account',
+          prompt: 'select_account', // TODO: how to work with none
           access_type: 'offline',
-          expiry_date: Date.now() + 12096e5,
+          include_granted_scopes: true,
         },
       },
       httpOptions: {
@@ -29,87 +32,121 @@ export const options: NextAuthOptions = {
       },
     }),
   ],
+  session: {
+    strategy: 'jwt', // Use JSON Web Tokens for session handling
+    // Seconds - How long until an idle session expires and is no longer valid.
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  // TODO: how can I make this work?
+  // jwt: {
+  //   secret: JWT_SECRET, // Ensure this is set in your environment variables
+  // },
   callbacks: {
-    async jwt({ token, account }) {
-      console.log('jwt callback params:', { token, account });
-      if (account) {
+    async jwt({ token, account, profile }) {
+      console.log('account', account);
+      console.log('profile', profile);
+
+      if (account && profile) {
+        // Initial sign-in if account exists
         // Save the access token and refresh token in the JWT on the initial login, as well as the user details
-        console.log('first sign in');
-
-        return {
-          access_token: account.access_token,
-          expires_at: account.expires_at,
-          refresh_token: account.refresh_token,
-          user: token,
+        token.user = {
+          email: profile.email,
+          name: profile.name,
+          image: profile.picture,
         };
-      } else if (Date.now() < (token.expires_at as number) * 1000) {
-        console.log('token not expired');
-        // If the access token has not expired yet, return it
-        return token;
-      } else {
-        if (!token.refresh_token) throw new Error('Missing refresh token');
-
-        // If the access token has expired, try to refresh it
-        console.log('trying to refresh token');
-        try {
-          // https://accounts.google.com/.well-known/openid-configuration
-          // We need the `token_endpoint`.
-          const response = await fetch('https://oauth2.googleapis.com/token', {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-              client_id: GOOGLE_ID as string,
-              client_secret: GOOGLE_SECRET as string,
-              grant_type: 'refresh_token',
-              refresh_token: token.refresh_token as string,
-            }),
-            method: 'POST',
-          });
-
-          const tokens = await response.json();
-
-          if (!response.ok) throw tokens;
-
-          return {
-            ...token, // Keep the previous token properties
-            access_token: tokens.access_token,
-            expires_at: Math.floor(Date.now() / 1000 + tokens.expires_in),
-            // Fall back to old refresh token, but note that
-            // many providers may only allow using a refresh token once.
-            refresh_token: tokens.refresh_token ?? token.refresh_token,
-          };
-        } catch (error) {
-          console.error('Error refreshing access token', error);
-          // The error property will be used client-side to handle the refresh token error
-          return { ...token, error: 'RefreshAccessTokenError' as const };
-        }
+        token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token; // Save the refresh token
+        token.accessTokenExpires = account.expires_at * 1000; // Expiry time in epoch msec
       }
+
+      console.log('token', token);
+
+      // Return the previous token if it's still valid
+      if (Date.now() < (token.accessTokenExpires as number)) {
+        return token;
+      }
+
+      // Access token has expired, try to update it
+      return await refreshAccessToken(token);
     },
     async session({ session, token }) {
       console.log('session params', { session, token });
-      return {
-        ...session,
-        ...token,
-      };
+      // Pass the token data to the session
+      session.user.email = token.user.email;
+      session.user.name = token.user.name;
+      session.user.image = token.user.picture ?? token.user.image;
+      session.accessToken = token.accessToken;
+      session.accessTokenExpires = token.accessTokenExpires;
+      session.error = token.error || null; // Pass the error to the session
+      return session;
     },
-    // Use the signIn() callback to control if a user is allowed to sign in.
-    // async signIn(params) {
-    //     console.log("signIn", params);
-    //     const { account, profile } = params;
-    //     //next-auth handles rejection of oauth
-
-    //     //initialize app
-    //     // if (account && account.access_token) {
-    //     //     try {
-    //     //         const auth = initGoogleAuth(account.access_token);
-    //     //         await findOrCreateSpreadsheet(auth);
-    //     //         return true;
-    //     //     } catch (err) {
-    //     //         return false;
-    //     //     }
-    //     // } else {
-    //     //     return false;
-    //     // }
-    //     return true;
+    // unnecessary
+    // async signIn({ account, profile }) {
+    //   // Use the signIn() callback to control if a user is allowed to sign in.
+    //   console.log('account', account);
+    //   console.log('profile', profile);
+    //   // initialize app
+    //   if (account && account.access_token) {
+    //     try {
+    //       const auth = initGoogleAuth(account.access_token);
+    //       await findOrCreateSpreadsheet(auth);
+    //       return true;
+    //     } catch (err) {
+    //       print(err);
+    //       return false;
+    //     }
+    //   } else return false;
     // },
   },
 };
+
+/**
+ * Function to refresh the Google access token
+ * @param {Object} token - The JWT token containing access and refresh tokens
+ * @returns {Object} - Updated token with new access and refresh tokens
+ */
+async function refreshAccessToken(token: any) {
+  try {
+    const url = 'https://oauth2.googleapis.com/token';
+
+    // Prepare the request body
+    const requestBody = new URLSearchParams({
+      client_id: process.env.GOOGLE_ID as string,
+      client_secret: process.env.GOOGLE_SECRET as string,
+      refresh_token: token.refreshToken,
+      grant_type: 'refresh_token',
+    });
+
+    // Use fetch to send the request
+    const response = await fetch(url, {
+      method: 'POST',
+      body: requestBody,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+
+    // Handle non-200 response status codes
+    if (!response.ok) {
+      throw new Error(`Failed to refresh token: ${response.statusText}`);
+    }
+
+    // Parse the response data
+    const refreshedTokens = await response.json();
+
+    console.log('refreshedTokens', refreshedTokens);
+
+    return {
+      ...token, // Keep the previous token properties
+      accessToken: refreshedTokens.access_token,
+      accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000, // Expires in ms
+      refreshToken: refreshedTokens.refresh_token || token.refreshToken, // Fall back to old refresh token
+    };
+  } catch (error) {
+    console.error('Error refreshing access token', error);
+    return {
+      ...token,
+      error: 'RefreshAccessTokenError',
+    };
+  }
+}
