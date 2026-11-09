@@ -20,11 +20,26 @@ export const options: NextAuthOptions = {
       clientId: GOOGLE_ID as string,
       clientSecret: GOOGLE_SECRET as string,
       authorization: {
+        // params: async (params, { session }) => {
+        //   // Check if the refresh token exists in the JWT
+        //   console.log('provider token', session);
+        //   const prompt = session?.refreshToken ? 'select_account' : 'consent';
+
+        //   // Set the prompt dynamically
+        //   return {
+        //     ...params,
+        //     scope: scopes.join(' '),
+        //     prompt: prompt,
+        //     access_type: 'offline',
+        //     include_granted_scopes: true,
+        //   };
+        // },
         params: {
           scope: scopes.join(' '),
-          prompt: 'select_account', // TODO: how to work with none
+          prompt: 'select_account', // TODO: how to work with none or select_account
           access_type: 'offline',
           include_granted_scopes: true,
+          // expiry_date: Date.now() + 12096e5, // TODO: is this not necessary?
         },
       },
       httpOptions: {
@@ -126,8 +141,13 @@ async function refreshAccessToken(token: any) {
       },
     });
 
+    console.log('response', response);
+    console.log('requestBody', requestBody);
+
     // Handle non-200 response status codes
     if (!response.ok) {
+      const errorDetails = await response.json();
+      console.error('Error details:', errorDetails);
       throw new Error(`Failed to refresh token: ${response.statusText}`);
     }
 

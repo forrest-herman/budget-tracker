@@ -1,41 +1,58 @@
 "use client"
 
-import {
-    ColumnDef,
-    flexRender,
-    getCoreRowModel,
-    useReactTable,
-} from "@tanstack/react-table"
+import { useEffect, useState } from "react";
 
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table"
+import { ColumnDef, ColumnFiltersState, flexRender, getCoreRowModel, getFacetedRowModel, getFacetedUniqueValues, getFilteredRowModel, useReactTable } from "@tanstack/react-table";
+
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+
+import { FilterBar } from "./FilterBar";
 
 interface DataTableProps<TData, TValue> {
-    columns: ColumnDef<TData, TValue>[]
-    data: TData[]
+    columns: ColumnDef<TData, TValue>[];
+    data: TData[];
+    showFilters: boolean;
 }
 
-export function DataTable<TData, TValue>({
-    columns,
-    data,
-}: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({ columns, data, showFilters = false }: DataTableProps<TData, TValue>) {
+    const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
     const table = useReactTable({
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
+        getFacetedRowModel: getFacetedRowModel(),
+        getFacetedUniqueValues: getFacetedUniqueValues(), // TODO: https://tanstack.com/table/v8/docs/guide/column-faceting
+        onColumnFiltersChange: setColumnFilters,
+        getFilteredRowModel: getFilteredRowModel(),
+        state: {
+            columnFilters,
+        },
     });
+
+    useEffect(() => {
+        console.log("table.getState().columnFilters", table.getState().columnFilters);
+    }, [table]);
 
     // TODO: add table formatting options for date like relative date
 
     return (
+        <div>
+            {showFilters && <FilterBar columns={table.getAllColumns()} />}
+            <p>{JSON.stringify({ columnFilters: table.getState().columnFilters }, null, 2)}</p>
+            <ScrollArea className='flex-1 h-96 rounded-md border overflow-x-auto'>
+                <TableView table={table} columns={columns} />
+                <ScrollBar orientation='horizontal' />
+            </ScrollArea>
+        </div>
+    );
+}
+
+const TableView = ({ table, columns }) => {
+    return (
         <Table>
-            <TableHeader>
+            <TableHeader className="sticky">
                 {/* display column titles */}
                 {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
@@ -64,6 +81,19 @@ export function DataTable<TData, TValue>({
                     </TableRow>
                 )}
             </TableBody>
+            <TableFooter>
+                {table.getFooterGroups().map((footerGroup) => {
+                    return (<TableRow key={footerGroup.id}>
+                        {footerGroup.headers.map((header) => {
+                            return <TableHead key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.footer, header.getContext())}</TableHead>;
+                        })}
+                    </TableRow>)
+                })}
+                {/* <TableRow>
+                    <TableCell colSpan={2}>Total</TableCell>
+                    <TableCell className='text-right'>$2,500.00</TableCell>
+                </TableRow> */}
+            </TableFooter>
         </Table>
     );
-}
+};

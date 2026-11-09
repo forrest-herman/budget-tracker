@@ -2,6 +2,10 @@ This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next
 
 ## Getting Started
 
+```bash
+npm install
+```
+
 First, run the development server:
 
 ```bash
@@ -28,7 +32,7 @@ The UI uses components by [shadcn](https://ui.shadcn.com/docs/installation/next)
 ```npm run build``` is used to create an optimized production build, and ```npm run start``` is used to run the Next.js server in production mode after the build process is completed.
 
 ### Environment Variables
-Create and sotre Environment Variables as defined by [Next.js](https://nextjs.org/docs/pages/building-your-application/configuring/environment-variables)
+Create and store Environment Variables as defined by [Next.js](https://nextjs.org/docs/pages/building-your-application/configuring/environment-variables)
 
 This project requires: 
 - `NEXTAUTH_URL`

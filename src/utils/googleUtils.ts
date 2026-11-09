@@ -1,6 +1,8 @@
 import type { OAuth2Client } from "google-auth-library";
 import type { drive_v3, sheets_v4 } from "googleapis";
-import { google } from "googleapis"
+import { google } from "googleapis";
+
+
 const { GOOGLE_ID, GOOGLE_SECRET } = process.env;
 
 export function initGoogleAuth(access_token: string) {
@@ -52,7 +54,7 @@ test cases
 export async function findSpreadsheet(drive: drive_v3.Drive): Promise<string | null> {
     const response = await drive.files.list();
 
-    console.log("FILES: \n\n", response);
+    console.log('\nFILES: \n', response);
 
     // find and return the spreadsheet id
     const files = response.data.files;

@@ -217,6 +217,8 @@ export default class SheetsClient {
     if (options?.limit) {
       query += ` limit ${options.limit}`;
     }
+    
+    console.log("query", query);
 
     const res = await this.query(query, options?.sheet);
 
@@ -328,6 +330,71 @@ export default class SheetsClient {
       delete spendingByCategory['hidden'];
     }
     return spendingByCategory;
+  }
+
+  async getTotalsByPeriod(options?: {
+    sheet: string;
+    startDate?: Date;
+    endDate?: Date;
+    period?: 'day' | ' month' | 'year';
+    where?: { [key: string]: string };
+    pivotBy?: string;
+  }): Promise<{ total: number; month: number; year: number; date?: string }[]> {
+    const period = options?.period || 'month'; // TODO: allow this to be changed in the future
+
+    let query = `
+      select 
+        sum(${this.columnIds.amount}), 
+        MONTH(${this.columnIds.date}), 
+        YEAR(${this.columnIds.date})
+    `;
+
+    // date bounds
+    if (options?.startDate && options?.endDate) {
+      // Both dates are provided
+      query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= ${this.columnIds.date} and ${
+        this.columnIds.date
+      } <= date '${options.endDate.toISOString().substring(0, 10)}'`;
+    } else if (options?.startDate) {
+      // Only start date is provided
+      query += ` where date '${options.startDate.toISOString().substring(0, 10)}' <= ${this.columnIds.date}`;
+    } else if (options?.endDate) {
+      // Only end date is provided
+      query += ` where ${this.columnIds.date} <= date '${options.endDate.toISOString().substring(0, 10)}'`;
+    } else if (options?.where) {
+      query += ` WHERE ${buildSqlWhere(options.where, this.columnIds)}`;
+    }
+
+    query += ` GROUP BY MONTH(${this.columnIds.date}), YEAR(${this.columnIds.date})`;
+
+    if (options?.pivotBy) query += ` PIVOT ${this.columnIds[options?.pivotBy]}`;
+
+    query += ` ORDER BY YEAR(${this.columnIds.date}), MONTH(${this.columnIds.date})`;
+    query += ` label sum(${this.columnIds.amount}) 'value', MONTH(${this.columnIds.date}) 'month', YEAR(${this.columnIds.date}) 'year'`;
+
+    // console.log('query', query);
+
+    const res = await this.query(query, options?.sheet);
+    if (res.length > 0) {
+      // console.log('res', res);
+
+      let totals: any = [];
+      res.forEach((row: any) => {
+        const date = `${row.year}-${String(row.month + 1).padStart(2, '0')}`; // Note: Month stored as index in sheets
+        // if (options?.pivotBy) {
+        //   const rowValues = row
+        //   delete rowValues.month
+        //   delete rowValues.year
+        //   totals.push({ values: [], date });
+        // }
+        totals.push({ ...row, date });
+      });
+
+      console.log('totals', totals.slice(-5));
+      return totals;
+    } else {
+      return [];
+    }
   }
 
   // Payment Methods

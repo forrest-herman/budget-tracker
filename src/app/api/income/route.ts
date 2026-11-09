@@ -1,6 +1,7 @@
 import { validateIncomeTransactions, validateTransactions } from "@/utils/TransactionsValidator";
 import { useSheetsClient } from "@/utils/hooks";
 
+
 export async function POST(req: Request) {
     const body = await req.json();
     const transactions = validateIncomeTransactions(body);
@@ -12,6 +13,6 @@ export async function POST(req: Request) {
         return Response.json("done");
     } catch (err) {
         console.log(err);
-        return Response.json("server error", { status: 500 });
+        throw Response.json('server error', { status: 500 });
     }
 }

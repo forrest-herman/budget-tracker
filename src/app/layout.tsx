@@ -18,8 +18,8 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => {
                 <ThemeProvider attribute='class' defaultTheme='dark' enableSystem disableTransitionOnChange>
                     <Nav isSettingsModalVisible={isSettingsModalVisible} setIsSettingModalVisible={setIsSettingModalVisible} />
                     <main className='h-full max-h-full w-full overflow-y-auto'>
-                        {/* {<SettingsModal isSettingsModalVisible={isSettingsModalVisible} setIsSettingModalVisible={setIsSettingModalVisible} />} */}
                         <div className='min-h-full h-full flex flex-col justify-center items-center'>{children}</div>
+                        {/* <SettingsModal isSettingsModalVisible={isSettingsModalVisible} setIsSettingModalVisible={setIsSettingModalVisible} /> */}
                         <Toaster />
                     </main>
                 </ThemeProvider>
